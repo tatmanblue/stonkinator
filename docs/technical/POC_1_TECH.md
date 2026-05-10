@@ -216,7 +216,8 @@ public interface IAiClient
 ```
 
 **`GeminiClient.cs`** — Key implementation details:
-- Streaming endpoint: `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key={apiKey}`
+- Streaming endpoint: `POST https://generativelanguage.googleapis.com/v1beta/models/{AI_MODEL}:streamGenerateContent?key={apiKey}`
+- Model controlled by `AI_MODEL` env var (default: `gemini-flash-latest`). Use `gemini-flash-latest` for free-tier accounts; `gemini-2.0-flash` requires billing enabled.
 - Auth via `key` query parameter
 - Build prompt as plain text table of OHLCV data with a system instruction asking for technical analysis
 - Parse SSE response: each `data:` line is a JSON chunk; extract `candidates[0].content.parts[0].text`
