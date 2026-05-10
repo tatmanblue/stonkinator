@@ -1,8 +1,13 @@
-﻿# Stonks
+﻿# The Stonkinator
+
+AKA Stonks for short.
+
+![image.jpg](docs/image.jpg)
+
 
 **AI-Powered Technical Analysis for Stocks & Financial Instruments**
 
-> **Educational Tool Only** — Not Financial Advice
+> **Educational Tool Only** — Not Financial Advice.  Please read the entire [disclaimer below](#disclaimer) before using.
 
 Stonks is an application that leverages modern AI models to provide technical analysis, pattern recognition, and actionable insights for stocks and other financial instruments. It is designed primarily for speculative day traders and retail investors who want to deepen their understanding of technical analysis.
 
@@ -105,10 +110,8 @@ TBD
 ## Disclaimer
 
 **This software is for educational purposes only.**
-It does not constitute financial, investment, or trading advice.  
-The developers are not registered financial advisors.  Use at your own risk. The author(s) and contributors 
-shall not be held liable for any financial losses or damages resulting from the use of this software.  
-Always do your own research and consult a licensed financial advisor before making any investment decisions.   
+It does not constitute financial, investment, or trading advice. The developers are not registered financial advisors.  Use at your own risk. The author(s) and contributors 
+shall not be held liable for any financial losses or damages resulting from the use of this software. Always do your own research and consult a licensed financial advisor before making any investment decisions.   
 
 AI-generated analysis is experimental and may contain inaccuracies. Users should verify all data 
 against official financial sources before making any decisions.
