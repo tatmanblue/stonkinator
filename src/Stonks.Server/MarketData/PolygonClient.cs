@@ -1,19 +1,19 @@
 using System.Net.Http.Json;
-using System.Text.Json;
+using System.Text.Json.Serialization;
 using Stonks.Server.Cache;
 using Stonks.Shared.Grpc;
 
 namespace Stonks.Server.MarketData;
 
-public class FinnhubClient : IMarketDataClient
+public class PolygonClient : IMarketDataClient
 {
-    private const string BASE_URL = "https://finnhub.io/api/v1/stock/candle";
+    private const string BASE_URL = "https://api.massive.com/v2/aggs/ticker";
 
     private readonly HttpClient httpClient;
     private readonly ICacheService cache;
     private readonly string apiKey;
 
-    public FinnhubClient(HttpClient httpClient, ICacheService cache)
+    public PolygonClient(HttpClient httpClient, ICacheService cache)
     {
         this.httpClient = httpClient;
         this.cache = cache;
@@ -29,28 +29,27 @@ public class FinnhubClient : IMarketDataClient
         if (cache.TryGet<List<OhlcvBarDto>>(cacheKey, out var cached) && cached is not null)
             return cached.Select(ToProto).ToList();
 
-        var from = ToUnixSeconds(startDate);
-        var to   = ToUnixSeconds(endDate);
-        var url  = $"{BASE_URL}?symbol={ticker}&resolution=D&from={from}&to={to}&token={apiKey}";
+        var url = $"{BASE_URL}/{ticker.ToUpper()}/range/1/day" +
+                  $"/{startDate:yyyy-MM-dd}/{endDate:yyyy-MM-dd}" +
+                  $"?adjusted=true&sort=asc&limit=50000&apiKey={apiKey}";
 
         var response = await httpClient.GetAsync(url, ct);
         response.EnsureSuccessStatusCode();
 
-        var raw = await response.Content.ReadFromJsonAsync<FinnhubResponse>(
-            cancellationToken: ct);
+        var raw = await response.Content.ReadFromJsonAsync<PolygonResponse>(cancellationToken: ct);
 
-        if (raw is null || raw.S != "ok" || raw.T is null)
+        if (raw?.Results is null || raw.Results.Length == 0)
             return [];
 
-        var bars = Enumerable.Range(0, raw.T.Length)
-            .Select(i => new OhlcvBarDto
+        var bars = raw.Results
+            .Select(r => new OhlcvBarDto
             {
-                Date   = DateTimeOffset.FromUnixTimeSeconds(raw.T[i]).UtcDateTime.ToString("yyyy-MM-dd"),
-                Open   = raw.O![i],
-                High   = raw.H![i],
-                Low    = raw.L![i],
-                Close  = raw.C![i],
-                Volume = raw.V![i]
+                Date   = DateTimeOffset.FromUnixTimeMilliseconds(r.T).UtcDateTime.ToString("yyyy-MM-dd"),
+                Open   = r.O,
+                High   = r.H,
+                Low    = r.L,
+                Close  = r.C,
+                Volume = (long)r.V
             })
             .ToList();
 
@@ -70,18 +69,21 @@ public class FinnhubClient : IMarketDataClient
         Volume = dto.Volume
     };
 
-    private static long ToUnixSeconds(DateOnly date) =>
-        new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).ToUnixTimeSeconds();
-
-    private sealed class FinnhubResponse
+    private sealed class PolygonResponse
     {
-        public double[]? C { get; set; }
-        public double[]? H { get; set; }
-        public double[]? L { get; set; }
-        public double[]? O { get; set; }
-        public string?   S { get; set; }
-        public long[]?   T { get; set; }
-        public long[]?   V { get; set; }
+        [JsonPropertyName("results")]  public PolygonBar[]? Results     { get; set; }
+        [JsonPropertyName("status")]   public string?       Status      { get; set; }
+        [JsonPropertyName("resultsCount")] public int       ResultsCount { get; set; }
+    }
+
+    private sealed class PolygonBar
+    {
+        [JsonPropertyName("o")] public double O { get; set; }
+        [JsonPropertyName("h")] public double H { get; set; }
+        [JsonPropertyName("l")] public double L { get; set; }
+        [JsonPropertyName("c")] public double C { get; set; }
+        [JsonPropertyName("v")] public double V { get; set; }
+        [JsonPropertyName("t")] public long   T { get; set; }
     }
 
     private sealed class OhlcvBarDto

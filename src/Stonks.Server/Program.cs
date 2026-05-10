@@ -17,10 +17,33 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddGrpc();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ICacheService, FileCacheService>();
+
 builder.Services.AddSingleton<IMarketDataClient>(sp =>
-    new FinnhubClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ICacheService>()));
+{
+    var http  = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var cache = sp.GetRequiredService<ICacheService>();
+    var provider = (Environment.GetEnvironmentVariable("STOCK_DATA_PROVIDER") ?? "massive").ToLowerInvariant();
+    return provider switch
+    {
+        "finnhub"          => (IMarketDataClient)new FinnhubClient(http, cache),
+        "massive"          => new PolygonClient(http, cache),
+        "polygon"          => new PolygonClient(http, cache),
+        _ => throw new InvalidOperationException($"Unknown STOCK_DATA_PROVIDER: '{provider}'. Valid values: massive, polygon, finnhub.")
+    };
+});
+
 builder.Services.AddSingleton<IAiClient>(sp =>
-    new GeminiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(), sp.GetRequiredService<ICacheService>()));
+{
+    var http     = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var cache    = sp.GetRequiredService<ICacheService>();
+    var geminiLog = sp.GetRequiredService<ILogger<GeminiClient>>();
+    var provider = (Environment.GetEnvironmentVariable("AI_PROVIDER") ?? "gemini").ToLowerInvariant();
+    return provider switch
+    {
+        "gemini" => (IAiClient)new GeminiClient(http, cache, geminiLog),
+        _ => throw new InvalidOperationException($"Unknown AI_PROVIDER: '{provider}'. Valid values: gemini.")
+    };
+});
 
 var app = builder.Build();
 app.MapGrpcService<StocksAnalysisService>();

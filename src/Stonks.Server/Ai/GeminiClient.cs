@@ -1,7 +1,9 @@
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Stonks.Server.Cache;
 using Stonks.Shared.Grpc;
 
@@ -9,20 +11,27 @@ namespace Stonks.Server.Ai;
 
 public class GeminiClient : IAiClient
 {
-    private const string ENDPOINT =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent";
+    private const string BASE_ENDPOINT =
+        "https://generativelanguage.googleapis.com/v1beta/models/{0}:streamGenerateContent";
+
+    private const int MAX_RETRIES = 3;
+    private const int BASE_RETRY_DELAY_MS = 10000;
 
     private readonly HttpClient httpClient;
     private readonly ICacheService cache;
+    private readonly ILogger<GeminiClient> logger;
     private readonly string apiKey;
+    private readonly string model;
     private readonly bool cacheResults;
 
-    public GeminiClient(HttpClient httpClient, ICacheService cache)
+    public GeminiClient(HttpClient httpClient, ICacheService cache, ILogger<GeminiClient> logger)
     {
         this.httpClient = httpClient;
         this.cache = cache;
-        apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-            ?? throw new InvalidOperationException("GEMINI_API_KEY is not set.");
+        this.logger = logger;
+        apiKey = Environment.GetEnvironmentVariable("AI_API_KEY")
+            ?? throw new InvalidOperationException("AI_API_KEY is not set.");
+        model = Environment.GetEnvironmentVariable("AI_MODEL") ?? "gemini-2.0-flash";
         cacheResults = string.Equals(
             Environment.GetEnvironmentVariable("CACHE_AI_RESULTS"), "true",
             StringComparison.OrdinalIgnoreCase);
@@ -44,67 +53,100 @@ public class GeminiClient : IAiClient
             yield break;
         }
 
+        var response = await SendWithRetryAsync(prompt, ct);
+
+        try
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var reader = new StreamReader(stream);
+
+            var fullText = new StringBuilder();
+            var buffer   = new StringBuilder();
+
+            while (!ct.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(ct);
+                if (line is null) break;
+
+                if (!line.StartsWith("data:"))
+                {
+                    if (line.Length == 0 && buffer.Length > 0)
+                    {
+                        var chunk = TryExtractText(buffer.ToString());
+                        if (chunk is not null)
+                        {
+                            fullText.Append(chunk);
+                            yield return chunk;
+                        }
+                        buffer.Clear();
+                    }
+                    continue;
+                }
+
+                buffer.AppendLine(line["data:".Length..].TrimStart());
+            }
+
+            if (buffer.Length > 0)
+            {
+                var chunk = TryExtractText(buffer.ToString());
+                if (chunk is not null)
+                {
+                    fullText.Append(chunk);
+                    yield return chunk;
+                }
+            }
+
+            if (cacheResults && fullText.Length > 0)
+                cache.Set(cacheKey, fullText.ToString());
+        }
+        finally
+        {
+            response.Dispose();
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendWithRetryAsync(string prompt, CancellationToken ct)
+    {
         var requestBody = new
         {
-            contents = new[]
-            {
-                new { parts = new[] { new { text = prompt } } }
-            }
+            contents = new[] { new { parts = new[] { new { text = prompt } } } }
         };
         var json = JsonSerializer.Serialize(requestBody);
-        var url  = $"{ENDPOINT}?key={apiKey}&alt=sse";
+        var url  = $"{string.Format(BASE_ENDPOINT, model)}?key={apiKey}&alt=sse";
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        logger.LogInformation("Sending request to Gemini model: {Model}", model);
+
+        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-
-        using var response = await httpClient.SendAsync(
-            request, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var reader = new StreamReader(stream);
-
-        var fullText = new StringBuilder();
-        var buffer   = new StringBuilder();
-
-        while (!ct.IsCancellationRequested)
-        {
-            var line = await reader.ReadLineAsync(ct);
-            if (line is null) break;
-
-            if (!line.StartsWith("data:"))
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                if (line.Length == 0 && buffer.Length > 0)
-                {
-                    var chunk = TryExtractText(buffer.ToString());
-                    if (chunk is not null)
-                    {
-                        fullText.Append(chunk);
-                        yield return chunk;
-                    }
-                    buffer.Clear();
-                }
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+
+            var response = await httpClient.SendAsync(
+                request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < MAX_RETRIES)
+            {
+                // Respect Retry-After if present, but enforce a minimum delay
+                var retryAfter = response.Headers.RetryAfter?.Delta;
+                var minDelay   = TimeSpan.FromMilliseconds(BASE_RETRY_DELAY_MS * Math.Pow(2, attempt));
+                var delay      = retryAfter.HasValue && retryAfter.Value > minDelay ? retryAfter.Value : minDelay;
+
+                logger.LogWarning(
+                    "Gemini 429 on attempt {Attempt}/{Max}. Retrying in {Delay}s.",
+                    attempt + 1, MAX_RETRIES + 1, delay.TotalSeconds);
+
+                response.Dispose();
+                await Task.Delay(delay, ct);
                 continue;
             }
 
-            buffer.AppendLine(line["data:".Length..].TrimStart());
+            response.EnsureSuccessStatusCode();
+            return response;
         }
 
-        // flush any remaining buffer
-        if (buffer.Length > 0)
-        {
-            var chunk = TryExtractText(buffer.ToString());
-            if (chunk is not null)
-            {
-                fullText.Append(chunk);
-                yield return chunk;
-            }
-        }
-
-        if (cacheResults && fullText.Length > 0)
-            cache.Set(cacheKey, fullText.ToString());
+        throw new HttpRequestException($"Gemini returned 429 after {MAX_RETRIES + 1} attempts. Check quota at https://aistudio.google.com");
     }
 
     private static string? TryExtractText(string jsonFragment)

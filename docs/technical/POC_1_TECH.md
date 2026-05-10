@@ -120,8 +120,12 @@ Place `.env` in the server project root (`src/Stonks.Server/.env`). Add to `.git
 Create an example `.env` called `.env.example` with placeholders.  This will be checked in and public so it must NOT contain any actual credentials.
 
 ```
-FINNHUB_API_KEY=<from POC_1_CRED.md>
-GEMINI_API_KEY=<from POC_1_CRED.md>
+STOCK_DATA_API_KEY=<from POC_1_CRED.md>
+STOCK_DATA_PROVIDER=massive          # massive | polygon | finnhub
+
+AI_API_KEY=<from POC_1_CRED.md>
+AI_PROVIDER=gemini                   # gemini
+
 CACHE_AI_RESULTS=false
 SERVER_PORT=5001
 ```
