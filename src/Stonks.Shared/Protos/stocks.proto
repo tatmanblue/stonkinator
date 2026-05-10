@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option csharp_namespace = "Stonks.Shared.Grpc";
+
+package stonks;
+
+service StocksAnalysis {
+  rpc AnalyzeStock (AnalyzeStockRequest) returns (stream AnalyzeStockResponse);
+}
+
+message AnalyzeStockRequest {
+  string ticker     = 1;
+  string start_date = 2;  // YYYY-MM-DD
+  string end_date   = 3;  // YYYY-MM-DD
+}
+
+message AnalyzeStockResponse {
+  oneof payload {
+    OhlcvData   ohlcv_data     = 1;
+    string      analysis_chunk = 2;
+    string      error_message  = 3;
+  }
+}
+
+message OhlcvBar {
+  string date   = 1;
+  double open   = 2;
+  double high   = 3;
+  double low    = 4;
+  double close  = 5;
+  int64  volume = 6;
+}
+
+message OhlcvData {
+  string            ticker = 1;
+  repeated OhlcvBar bars   = 2;
+}

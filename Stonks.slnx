@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Stonks.Client.Desktop/Stonks.Client.Desktop.csproj" />
+    <Project Path="src/Stonks.Server/Stonks.Server.csproj" />
+    <Project Path="src/Stonks.Shared/Stonks.Shared.csproj" />
+  </Folder>
+</Solution>

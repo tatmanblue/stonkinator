@@ -1,2 +1,12 @@
 .claude/
 .idea/
+
+# Stonks server secrets
+src/Stonks.Server/.env
+
+# dotnet build stuff
+bin/
+obj/
+
+# Stonks file cache
+**/Stonks/cache/
