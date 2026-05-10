@@ -112,7 +112,7 @@ The developers and contributors are not financial advisors. This is not an inves
 
 ## License
 
-[MIT License](LICENSE) (or choose your preferred license)
+[License](LICENSE) (or choose your preferred license)
 
 ---
 
