@@ -117,6 +117,8 @@ Both server and client reference `Stonks.Shared` so they share generated types.
 
 Place `.env` in the server project root (`src/Stonks.Server/.env`). Add to `.gitignore`.
 
+Create an example `.env` called `.env.example` with placeholders.  This will be checked in and public so it must contain any actual credentials.
+
 ```
 FINNHUB_API_KEY=<from POC_1_CRED.md>
 GEMINI_API_KEY=<from POC_1_CRED.md>
