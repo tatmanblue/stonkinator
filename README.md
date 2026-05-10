@@ -91,11 +91,13 @@ Market Data APIs         AI / LLM APIs           Database
 
 ### Installation & Running (Development)
 
-TBD
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for prerequisites, environment configuration, and steps to run the server and desktop client locally.
 
 ## Project Structure
 
-TBD
+See [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) for an annotated directory tree and descriptions of each project.
+
+
 
 ---
 
