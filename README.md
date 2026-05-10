@@ -105,14 +105,23 @@ TBD
 ## Disclaimer
 
 **This software is for educational purposes only.**
+It does not constitute financial, investment, or trading advice.  
+The developers are not registered financial advisors.  Use at your own risk. The author(s) and contributors 
+shall not be held liable for any financial losses or damages resulting from the use of this software.  
+Always do your own research and consult a licensed financial advisor before making any investment decisions.   
 
-The developers and contributors are not financial advisors. This is not an investment tool nor does it provide financial advice. Use at your own risk.
+AI-generated analysis is experimental and may contain inaccuracies. Users should verify all data 
+against official financial sources before making any decisions.
+
+**Past performance does not guarantee future results.**  
+Trading and investing involves substantial risk of loss. You can lose all your money.
+
 
 ---
 
 ## License
 
-[License](LICENSE) (or choose your preferred license)
+[License](LICENSE)
 
 ---
 
