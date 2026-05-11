@@ -1,118 +1,35 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using Avalonia.Threading;
-using Grpc.Core;
-using Stonks.Shared.Grpc;
 
 namespace Stonks.Client.Desktop.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged
 {
-    private readonly StocksAnalysis.StocksAnalysisClient grpcClient;
-
-    private string ticker = "AAPL";
-    private DateTimeOffset? startDate = DateTimeOffset.Now.AddMonths(-3);
-    private DateTimeOffset? endDate = DateTimeOffset.Now;
-    private string analysisText = "";
-    private bool isLoading;
-    private OhlcvBar[] chartBars = [];
+    private int selectedTabIndex;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public MainWindowViewModel(StocksAnalysis.StocksAnalysisClient grpcClient)
+    public DashboardViewModel Dashboard { get; }
+    public SearchAnalyzeViewModel SearchAnalyze { get; }
+
+    public int SelectedTabIndex
     {
-        this.grpcClient = grpcClient;
-        AnalyzeCommand = new AsyncCommand(RunAnalysisAsync);
+        get => selectedTabIndex;
+        set => SetField(ref selectedTabIndex, value);
     }
 
-    public string Ticker
+    public MainWindowViewModel(DashboardViewModel dashboard, SearchAnalyzeViewModel searchAnalyze)
     {
-        get => ticker;
-        set => SetField(ref ticker, value);
-    }
+        Dashboard     = dashboard;
+        SearchAnalyze = searchAnalyze;
 
-    public DateTimeOffset? StartDate
-    {
-        get => startDate;
-        set => SetField(ref startDate, value);
-    }
-
-    public DateTimeOffset? EndDate
-    {
-        get => endDate;
-        set => SetField(ref endDate, value);
-    }
-
-    public string AnalysisText
-    {
-        get => analysisText;
-        set => SetField(ref analysisText, value);
-    }
-
-    public bool IsLoading
-    {
-        get => isLoading;
-        set
+        dashboard.ItemOpenRequested = item =>
         {
-            SetField(ref isLoading, value);
-            (AnalyzeCommand as AsyncCommand)?.RaiseCanExecuteChanged();
-        }
-    }
+            searchAnalyze.LoadFromHistory(item);
+            SelectedTabIndex = 1;
+        };
 
-    public OhlcvBar[] ChartBars
-    {
-        get => chartBars;
-        set => SetField(ref chartBars, value);
-    }
-
-    public ICommand AnalyzeCommand { get; }
-
-    private async Task RunAnalysisAsync()
-    {
-        IsLoading = true;
-        AnalysisText = "";
-        ChartBars = [];
-
-        try
-        {
-            var request = new AnalyzeStockRequest
-            {
-                Ticker    = Ticker.Trim().ToUpper(),
-                StartDate = (StartDate ?? DateTimeOffset.Now.AddMonths(-3)).ToString("yyyy-MM-dd"),
-                EndDate   = (EndDate   ?? DateTimeOffset.Now).ToString("yyyy-MM-dd")
-            };
-
-            using var call = grpcClient.AnalyzeStock(request);
-            await foreach (var response in call.ResponseStream.ReadAllAsync())
-            {
-                switch (response.PayloadCase)
-                {
-                    case AnalyzeStockResponse.PayloadOneofCase.OhlcvData:
-                        var bars = response.OhlcvData.Bars.ToArray();
-                        Dispatcher.UIThread.Post(() => ChartBars = bars);
-                        break;
-
-                    case AnalyzeStockResponse.PayloadOneofCase.AnalysisChunk:
-                        var chunk = response.AnalysisChunk;
-                        Dispatcher.UIThread.Post(() => AnalysisText += chunk);
-                        break;
-
-                    case AnalyzeStockResponse.PayloadOneofCase.ErrorMessage:
-                        var msg = response.ErrorMessage;
-                        Dispatcher.UIThread.Post(() => AnalysisText += $"\n[Error] {msg}");
-                        break;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AnalysisText += $"\n[Error] {ex.Message}";
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        searchAnalyze.AnalysisCompleted = dashboard.LoadHistoryAsync;
     }
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)

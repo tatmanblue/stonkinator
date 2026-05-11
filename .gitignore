@@ -1,8 +1,9 @@
 .claude/
 .idea/
 
-# Stonks server secrets
+# Stonks secrets and local config
 src/Stonks.Server/.env
+src/Stonks.Client.Desktop/client.env
 
 # dotnet build stuff
 bin/

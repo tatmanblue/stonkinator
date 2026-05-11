@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Stonks.Client.Desktop.ViewModels"
+             x:Class="Stonks.Client.Desktop.Views.DashboardView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Error banner -->
+        <Border Grid.Row="0"
+                Background="#F8D7DA"
+                BorderBrush="#F5C6CB"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="8,8,8,0"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="#721C24"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Padding="8,8,8,4">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Content="Re-analyze All"
+                        Command="{Binding ReanalyzeAllCommand}" />
+                <TextBlock Text="Refreshing..."
+                           IsVisible="{Binding IsRefreshing}"
+                           VerticalAlignment="Center"
+                           FontStyle="Italic" />
+            </StackPanel>
+        </Border>
+
+        <!-- Content: empty state or list -->
+        <Panel Grid.Row="2">
+
+            <!-- Empty state -->
+            <Border IsVisible="{Binding IsEmpty}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <TextBlock Text="No stocks analyzed yet — go to Search / Analyze to get started."
+                           FontSize="14"
+                           Foreground="Gray"
+                           TextAlignment="Center" />
+            </Border>
+
+            <!-- History list -->
+            <ListBox x:Name="HistoryList"
+                     IsVisible="{Binding IsNotEmpty}"
+                     ItemsSource="{Binding Items}"
+                     DoubleTapped="OnListDoubleTapped"
+                     SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:AnalysisHistoryItemViewModel}">
+                        <Grid ColumnDefinitions="90,140,80,*,38" Margin="4,2">
+
+                            <!-- Ticker -->
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Ticker}"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center" />
+
+                            <!-- Analysis date -->
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding AnalyzedAt}"
+                                       VerticalAlignment="Center"
+                                       Foreground="Gray"
+                                       FontSize="12" />
+
+                            <!-- Price at analysis -->
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding PriceAtClose}"
+                                       VerticalAlignment="Center" />
+
+                            <!-- Badges -->
+                            <ItemsControl Grid.Column="3"
+                                          ItemsSource="{Binding Badges}"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:BadgeViewModel}">
+                                        <Border Background="{Binding Color}"
+                                                CornerRadius="4"
+                                                Padding="5,2"
+                                                Margin="2,1">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="11" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Re-analyze button -->
+                            <Button Grid.Column="4"
+                                    Content="↺"
+                                    Command="{Binding ReanalyzeCommand}"
+                                    ToolTip.Tip="Re-analyze"
+                                    Padding="4,2"
+                                    FontSize="14"
+                                    VerticalAlignment="Center" />
+
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+        </Panel>
+
+    </Grid>
+
+</UserControl>

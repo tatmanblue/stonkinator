@@ -4,6 +4,8 @@ option csharp_namespace = "Stonks.Shared.Grpc";
 
 package stonks;
 
+// ── Existing service (unchanged) ────────────────────────────────────────────
+
 service StocksAnalysis {
   rpc AnalyzeStock (AnalyzeStockRequest) returns (stream AnalyzeStockResponse);
 }
@@ -35,3 +37,30 @@ message OhlcvData {
   string            ticker = 1;
   repeated OhlcvBar bars   = 2;
 }
+
+// ── History service (new) ────────────────────────────────────────────────────
+
+service StocksHistory {
+  rpc GetAnalysisHistory (GetAnalysisHistoryRequest) returns (GetAnalysisHistoryResponse);
+  rpc ReanalyzeStock     (ReanalyzeStockRequest)     returns (ReanalyzeStockResponse);
+  rpc ReanalyzeAll       (ReanalyzeAllRequest)        returns (ReanalyzeAllResponse);
+}
+
+message AnalysisHistoryItem {
+  string          ticker         = 1;
+  string          analyzed_at    = 2;  // ISO 8601 UTC
+  string          start_date     = 3;
+  string          end_date       = 4;
+  string          ai_result_text = 5;
+  repeated string badges         = 6;
+  double          price_at_close = 7;
+}
+
+message GetAnalysisHistoryRequest  {}
+message GetAnalysisHistoryResponse { repeated AnalysisHistoryItem items = 1; }
+
+message ReanalyzeStockRequest  { string ticker = 1; }
+message ReanalyzeStockResponse { bool   queued  = 1; }
+
+message ReanalyzeAllRequest  {}
+message ReanalyzeAllResponse { int32 queued_count = 1; }

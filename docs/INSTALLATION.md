@@ -34,6 +34,7 @@ Edit `src/Stonks.Server/.env`:
 | `AI_MODEL` | Model identifier to use | `gemini-flash-latest` |
 | `CACHE_AI_RESULTS` | Cache AI responses to disk to reduce API calls | `true` or `false` |
 | `SERVER_PORT` | Port the server listens on | `5001` |
+| `DATABASE_PATH` | Override SQLite database file location (optional) | *(defaults to `%LocalAppData%/Stonks/stonks.db`)* |
 
 ### 3. Run the server
 
@@ -41,9 +42,26 @@ Edit `src/Stonks.Server/.env`:
 dotnet run --project src/Stonks.Server
 ```
 
-The server will start on the configured `SERVER_PORT` (default `5001`).
+The server will start on the configured `SERVER_PORT` (default `5001`). On first run it creates the SQLite database automatically.
 
-### 4. Run the desktop client
+### 4. (Optional) Configure client connection
+
+If the server is running on a non-default port or host, create `client.env` next to the client executable:
+
+```bash
+cp src/Stonks.Client.Desktop/client.env.example src/Stonks.Client.Desktop/client.env
+```
+
+Edit `client.env`:
+
+| Variable | Description | Default |
+|---|---|---|
+| `SERVER_HOST` | Hostname of the Stonks server | `localhost` |
+| `SERVER_PORT` | Port of the Stonks server | `5001` |
+
+If `client.env` is absent the client uses `localhost:5001` automatically.
+
+### 5. Run the desktop client
 
 In a separate terminal:
 
@@ -51,9 +69,11 @@ In a separate terminal:
 dotnet run --project src/Stonks.Client.Desktop
 ```
 
-The client connects to the server automatically on the default port. Both processes must be running at the same time for the application to function.
+The client opens to the Dashboard tab. If no stocks have been analyzed yet, switch to the **Search / Analyze** tab to run your first analysis. Both the server and client must be running at the same time for the application to function.
 
 ## Notes
 
 - The `.env` file is excluded from source control. Never commit your API keys.
+- `client.env` is also excluded from source control.
 - Set `CACHE_AI_RESULTS=true` during development to avoid redundant AI API calls while iterating on UI or server logic.
+- Analysis history is stored in SQLite at `%LocalAppData%/Stonks/stonks.db` (Windows). The file is created automatically on first run.

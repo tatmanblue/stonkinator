@@ -1,6 +1,6 @@
 # Goal
 
-Please read the [design doc](docs/DESIGN.md).
+Please read the [design doc](docs/technical/DESIGN.md).
 
 # Technology
 
