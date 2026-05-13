@@ -137,6 +137,6 @@ Contributions are welcome! Please see `CONTRIBUTING.md` for guidelines.
 ---
 
 ## Status/Version
-Proof of Concept/Limited updates  
+MVP/Limited updates  
 2026.05.11  
 
