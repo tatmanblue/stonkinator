@@ -5,7 +5,7 @@ application.
 
 ## History
 
-My process is an interative approach for building spec files.  Interations are creating or editing a spec, asking agents
+My process is an iterative approach for building spec files.  Iterations are creating or editing a spec, asking agents
 to create responses and repeating.  This is akin to the old design days of lengthy meetings and whiteboard sessions, 
 but instead of a team of people, I am using an agent. 
 
@@ -21,4 +21,5 @@ document the entire process, of iterating over several versions with an agent, b
 produces a clear design.
 
 Overall, this iterative spec driven interactions with an agent has resulted in a decent MVP.
+
 
