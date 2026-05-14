@@ -130,6 +130,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         var request = new AnalyzeStockRequest
         {
             Ticker    = ticker,
+            // TODO: make this computation configurable
             StartDate = DateTimeOffset.Now.AddMonths(-3).ToString("yyyy-MM-dd"),
             EndDate   = DateTimeOffset.Now.ToString("yyyy-MM-dd"),
         };

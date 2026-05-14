@@ -3,7 +3,7 @@
 
 # Stonks secrets and local config
 src/Stonks.Server/.env
-src/Stonks.Client.Desktop/client.env
+src/Stonks.Client.Desktop/.env
 
 # dotnet build stuff
 bin/

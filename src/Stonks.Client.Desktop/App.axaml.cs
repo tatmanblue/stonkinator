@@ -16,7 +16,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        LoadClientConfig();
+        DotNetEnv.Env.Load("client.env");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -37,20 +37,4 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static void LoadClientConfig()
-    {
-        const string configFile = "client.env";
-        if (!File.Exists(configFile)) return;
-
-        foreach (var line in File.ReadAllLines(configFile))
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith('#') || !trimmed.Contains('=')) continue;
-            var idx = trimmed.IndexOf('=');
-            var key = trimmed[..idx].Trim();
-            var val = trimmed[(idx + 1)..].Trim();
-            if (!string.IsNullOrEmpty(key))
-                Environment.SetEnvironmentVariable(key, val);
-        }
-    }
 }

@@ -1,21 +1,21 @@
 using Avalonia;
 using System;
+using System.Threading;
+using Stonks.Client.Desktop;
 
-namespace Stonks.Client.Desktop;
-
-class Program
+// Set STA thread for Avalonia on Windows
+if (OperatingSystem.IsWindows())
 {
-    [STAThread]
-    public static void Main(string[] args)
-    {
-        // Required for gRPC HTTP/2 without TLS on .NET
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-    }
-
-    public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .WithInterFont()
-            .LogToTrace();
+    Thread.CurrentThread.ApartmentState = ApartmentState.STA;
 }
+
+// Required for gRPC HTTP/2 without TLS on .NET
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+static AppBuilder BuildAvaloniaApp()
+    => AppBuilder.Configure<App>()
+        .UsePlatformDetect()
+        .WithInterFont()
+        .LogToTrace();
