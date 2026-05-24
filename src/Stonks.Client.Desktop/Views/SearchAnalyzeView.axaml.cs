@@ -30,9 +30,13 @@ public partial class SearchAnalyzeView : UserControl
     {
         if (e.PropertyName == nameof(SearchAnalyzeViewModel.ChartBars) && viewModel is not null)
             UpdateChart(viewModel.ChartBars);
+    }
 
-        if (e.PropertyName == nameof(SearchAnalyzeViewModel.AnalysisText))
-            AnalysisScroll.ScrollToEnd();
+    private async void OnCopyClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null && viewModel is not null)
+            await clipboard.SetTextAsync(viewModel.AnalysisText);
     }
 
     private void UpdateChart(OhlcvBar[] bars)

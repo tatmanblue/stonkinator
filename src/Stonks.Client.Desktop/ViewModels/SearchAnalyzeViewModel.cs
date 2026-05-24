@@ -15,6 +15,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     private DateTimeOffset? startDate = DateTimeOffset.Now.AddMonths(-3);
     private DateTimeOffset? endDate = DateTimeOffset.Now;
     private string analysisText = "";
+    private string rawBuffer = "";
     private string? errorMessage;
     private bool isLoading;
     private OhlcvBar[] chartBars = [];
@@ -48,7 +49,11 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     public string AnalysisText
     {
         get => analysisText;
-        set => SetField(ref analysisText, value);
+        set
+        {
+            SetField(ref analysisText, value);
+            OnPropertyChanged(nameof(HasAnalysisText));
+        }
     }
 
     public string? ErrorMessage
@@ -62,6 +67,8 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     }
 
     public bool HasError => errorMessage is not null;
+
+    public bool HasAnalysisText => !string.IsNullOrEmpty(analysisText);
 
     public bool IsLoading
     {
@@ -98,6 +105,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     private async Task RunAnalysisAsync()
     {
         IsLoading = true;
+        rawBuffer = "";
         AnalysisText = "";
         ChartBars = [];
         ErrorMessage = null;
@@ -122,8 +130,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
                         break;
 
                     case AnalyzeStockResponse.PayloadOneofCase.AnalysisChunk:
-                        var chunk = response.AnalysisChunk;
-                        Dispatcher.UIThread.Post(() => AnalysisText += chunk);
+                        rawBuffer += response.AnalysisChunk;
                         break;
 
                     case AnalyzeStockResponse.PayloadOneofCase.ErrorMessage:
@@ -147,6 +154,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         }
         finally
         {
+            AnalysisText = rawBuffer;
             IsLoading = false;
         }
 
