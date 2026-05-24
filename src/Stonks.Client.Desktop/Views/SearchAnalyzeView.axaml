@@ -40,10 +40,10 @@
         <Grid Grid.Row="2" ColumnDefinitions="*,*">
             <sp:AvaPlot x:Name="AvaPlot" Grid.Column="0" Margin="4" />
             <ScrollViewer x:Name="AnalysisScroll" Grid.Column="1" Margin="4">
-                <TextBlock Text="{Binding AnalysisText}"
-                           TextWrapping="Wrap"
-                           Padding="8"
-                           FontFamily="Consolas,Courier New,monospace" />
+                <SelectableTextBlock Text="{Binding AnalysisText}"
+                                    TextWrapping="Wrap"
+                                    Padding="8"
+                                    FontFamily="Consolas,Courier New,monospace" />
             </ScrollViewer>
         </Grid>
 
