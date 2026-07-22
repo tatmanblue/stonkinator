@@ -32,8 +32,8 @@ builder.Services.AddSingleton<IMarketDataClient>(sp =>
     return provider switch
     {
         "finnhub" => (IMarketDataClient)new FinnhubClient(http, cache),
-        "massive" => new PolygonClient(http, cache),
-        "polygon" => new PolygonClient(http, cache),
+        "massive" => new MassiveClient(http, cache),
+        "polygon" => new MassiveClient(http, cache),
         _ => throw new InvalidOperationException($"Unknown STOCK_DATA_PROVIDER: '{provider}'. Valid values: massive, polygon, finnhub.")
     };
 });

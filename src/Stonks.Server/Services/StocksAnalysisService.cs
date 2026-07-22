@@ -48,7 +48,7 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to fetch OHLCV data");
-            await responseStream.WriteAsync(new AnalyzeStockResponse { ErrorMessage = ex.Message });
+            await responseStream.WriteAsync(new AnalyzeStockResponse { ErrorMessage = $"Market data fetch failed: {ex.Message}" });
             return;
         }
 
@@ -70,7 +70,7 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         catch (Exception ex)
         {
             logger.LogError(ex, "AI analysis failed");
-            await responseStream.WriteAsync(new AnalyzeStockResponse { ErrorMessage = ex.Message });
+            await responseStream.WriteAsync(new AnalyzeStockResponse { ErrorMessage = $"AI analysis failed: {ex.Message}" });
         }
 
         if (analysisSucceeded && fullText.Length > 0)

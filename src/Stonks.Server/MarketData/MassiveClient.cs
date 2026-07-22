@@ -5,7 +5,7 @@ using Stonks.Shared.Grpc;
 
 namespace Stonks.Server.MarketData;
 
-public class PolygonClient : IMarketDataClient
+public class MassiveClient : IMarketDataClient
 {
     private const string BASE_URL = "https://api.massive.com/v2/aggs/ticker";
 
@@ -13,7 +13,7 @@ public class PolygonClient : IMarketDataClient
     private readonly ICacheService cache;
     private readonly string apiKey;
 
-    public PolygonClient(HttpClient httpClient, ICacheService cache)
+    public MassiveClient(HttpClient httpClient, ICacheService cache)
     {
         this.httpClient = httpClient;
         this.cache = cache;
@@ -33,7 +33,7 @@ public class PolygonClient : IMarketDataClient
                   $"/{startDate:yyyy-MM-dd}/{endDate:yyyy-MM-dd}" +
                   $"?adjusted=true&sort=asc&limit=50000&apiKey={apiKey}";
 
-        var response = await httpClient.GetAsync(url, ct);
+        var response = await SendWithRetryAsync(url, ct);
         response.EnsureSuccessStatusCode();
 
         var raw = await response.Content.ReadFromJsonAsync<PolygonResponse>(cancellationToken: ct);
@@ -57,6 +57,24 @@ public class PolygonClient : IMarketDataClient
         cache.Set(cacheKey, bars, ttl);
 
         return bars.Select(ToProto).ToList();
+    }
+
+    private async Task<HttpResponseMessage> SendWithRetryAsync(string url, CancellationToken ct)
+    {
+        int[] backoffSeconds = [1, 2, 4];
+        HttpResponseMessage? response = null;
+        for (int attempt = 0; attempt <= backoffSeconds.Length; attempt++)
+        {
+            response = await httpClient.GetAsync(url, ct);
+            if (response.IsSuccessStatusCode ||
+                (response.StatusCode != System.Net.HttpStatusCode.ServiceUnavailable &&
+                 response.StatusCode != System.Net.HttpStatusCode.TooManyRequests))
+                return response;
+
+            if (attempt < backoffSeconds.Length)
+                await Task.Delay(TimeSpan.FromSeconds(backoffSeconds[attempt]), ct);
+        }
+        return response!;
     }
 
     private static OhlcvBar ToProto(OhlcvBarDto dto) => new()

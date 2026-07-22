@@ -142,11 +142,24 @@ public class GeminiClient : IAiClient
                 continue;
             }
 
+            if (response.StatusCode == HttpStatusCode.ServiceUnavailable && attempt < MAX_RETRIES)
+            {
+                var delay = TimeSpan.FromMilliseconds(BASE_RETRY_DELAY_MS * Math.Pow(2, attempt));
+
+                logger.LogWarning(
+                    "Gemini 503 on attempt {Attempt}/{Max}. Retrying in {Delay}s.",
+                    attempt + 1, MAX_RETRIES + 1, delay.TotalSeconds);
+
+                response.Dispose();
+                await Task.Delay(delay, ct);
+                continue;
+            }
+
             response.EnsureSuccessStatusCode();
             return response;
         }
 
-        throw new HttpRequestException($"Gemini returned 429 after {MAX_RETRIES + 1} attempts. Check quota at https://aistudio.google.com");
+        throw new HttpRequestException($"Gemini AI service is temporarily unavailable. Please try again shortly.");
     }
 
     private static string? TryExtractText(string jsonFragment)

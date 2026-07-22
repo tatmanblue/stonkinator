@@ -48,7 +48,7 @@ The backend service. Responsibilities:
 
 Key files:
 - `Ai/GeminiClient.cs` — Gemini AI integration
-- `MarketData/PolygonClient.cs`, `FinnhubClient.cs` — market data providers
+- `MarketData/MassiveClient.cs`, `FinnhubClient.cs` — market data providers
 - `Cache/FileCacheService.cs` — disk-based response cache
 - `Services/StocksAnalysisService.cs` — orchestrates the analysis pipeline
 
