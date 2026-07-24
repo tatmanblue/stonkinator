@@ -34,6 +34,7 @@ Future clients (Web, Mobile) are possible and the architecture has been designed
 - Interactive candlestick charts with overlays
 - (optional) Real-time and historical market data integration
 - Watchlist and saved analysis management
+- Options evaluator: straddle/strangle break-even calculator with auto-fetched or manually-entered premiums, and saved evaluations
 - Clear, educational explanations of AI insights
 - Cross-platform desktop support (Windows, macOS, Linux)
 

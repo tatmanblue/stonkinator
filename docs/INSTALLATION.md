@@ -69,7 +69,7 @@ In a separate terminal:
 dotnet run --project src/Stonks.Client.Desktop
 ```
 
-The client opens to the Dashboard tab. If no stocks have been analyzed yet, switch to the **Search / Analyze** tab to run your first analysis. Both the server and client must be running at the same time for the application to function.
+The client opens to the Dashboard tab. If no stocks have been analyzed yet, switch to the **Search / Analyze** tab to run your first analysis. The **Options Evaluator** tab provides a straddle/strangle break-even calculator. Both the server and client must be running at the same time for the application to function.
 
 ## Notes
 
@@ -77,3 +77,4 @@ The client opens to the Dashboard tab. If no stocks have been analyzed yet, swit
 - `client.env` is also excluded from source control.
 - Set `CACHE_AI_RESULTS=true` during development to avoid redundant AI API calls while iterating on UI or server logic.
 - Analysis history is stored in SQLite at `%LocalAppData%/Stonks/stonks.db` (Windows). The file is created automatically on first run.
+- Options data (expirations and chain premiums) is only available with `STOCK_DATA_PROVIDER=massive` or `polygon`; Finnhub has no options support. Even with Massive/Polygon, fetching the live options chain (premiums) requires a paid options subscription tier on that account — the expiration-dates lookup does not. If either call is unavailable, the Options Evaluator tab falls back to manual entry for that data.
