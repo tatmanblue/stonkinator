@@ -19,6 +19,10 @@
                 <views:SearchAnalyzeView DataContext="{Binding SearchAnalyze}" />
             </TabItem>
 
+            <TabItem Header="Options Evaluator">
+                <views:OptionsEvaluatorView DataContext="{Binding OptionsEvaluator}" />
+            </TabItem>
+
         </TabControl>
 
         <!-- Disclaimer bar — always visible outside the tabs -->

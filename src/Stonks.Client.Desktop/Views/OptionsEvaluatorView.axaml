@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Stonks.Client.Desktop.ViewModels"
+             x:Class="Stonks.Client.Desktop.Views.OptionsEvaluatorView"
+             x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- Error banner -->
+        <Border Grid.Row="0"
+                Background="#F8D7DA"
+                BorderBrush="#F5C6CB"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="8,8,8,0"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="#721C24"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Neutral status/fallback notice -->
+        <Border Grid.Row="1"
+                Background="#D6E4F0"
+                BorderBrush="#B8D0E8"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="8,8,8,0"
+                IsVisible="{Binding HasStatusNotice}">
+            <TextBlock Text="{Binding StatusNotice}"
+                       Foreground="#1B3A5C"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Input toolbar -->
+        <Border Grid.Row="2" Padding="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock VerticalAlignment="Center" Text="Ticker:" />
+                <TextBox Width="80" Text="{Binding Ticker}" />
+
+                <TextBlock VerticalAlignment="Center" Text="Expiration:" />
+                <ComboBox Width="140"
+                          ItemsSource="{Binding AvailableExpirations}"
+                          SelectedItem="{Binding SelectedExpiration}"
+                          IsVisible="{Binding !UseManualExpiration}" />
+                <DatePicker SelectedDate="{Binding ManualExpirationDate}"
+                            IsVisible="{Binding UseManualExpiration}" />
+                <ToggleButton Content="Manual"
+                              IsChecked="{Binding UseManualExpiration}"
+                              ToolTip.Tip="Enter expiration date manually instead of using the API list" />
+
+                <TextBlock VerticalAlignment="Center" Text="Current Price:" />
+                <TextBox Width="80" Text="{Binding CurrentPrice}" />
+
+                <TextBlock VerticalAlignment="Center" Text="Commission:" />
+                <TextBox Width="60" Text="{Binding Commission}" />
+
+                <Button Content="Fetch Expirations" Command="{Binding FetchExpirationsCommand}" />
+                <Button Content="Fetch Chain" Command="{Binding FetchChainCommand}" />
+                <Button Content="Add Row" Command="{Binding AddStrikeRowCommand}" />
+                <Button Content="Save Evaluation" Command="{Binding SaveEvaluationCommand}" />
+
+                <TextBlock Text="Loading expirations..." IsVisible="{Binding IsLoadingExpirations}" FontStyle="Italic" VerticalAlignment="Center" />
+                <TextBlock Text="Loading chain..." IsVisible="{Binding IsLoadingChain}" FontStyle="Italic" VerticalAlignment="Center" />
+                <TextBlock Text="Saving..." IsVisible="{Binding IsSaving}" FontStyle="Italic" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- Content: strikes table + saved evaluations panel -->
+        <Grid Grid.Row="3" ColumnDefinitions="2*,1*">
+
+            <DataGrid Grid.Column="0"
+                      Margin="8"
+                      ItemsSource="{Binding Strikes}"
+                      AutoGenerateColumns="False"
+                      CanUserSortColumns="False"
+                      IsReadOnly="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Strike" Binding="{Binding Strike, Mode=TwoWay}" />
+                    <DataGridTextColumn Header="Call Prem" Binding="{Binding CallPremium, Mode=TwoWay}" />
+                    <DataGridTextColumn Header="Put Prem" Binding="{Binding PutPremium, Mode=TwoWay}" />
+                    <DataGridTextColumn Header="Call Cost" Binding="{Binding CallCost, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Put Cost" Binding="{Binding PutCost, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Straddle" Binding="{Binding Straddle, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="BE Call" Binding="{Binding BreakEvenCall, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="BE Put" Binding="{Binding BreakEvenPut, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="ITM Up" Binding="{Binding ItmUp, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="ITM Down" Binding="{Binding ItmDown, StringFormat={}{0:F2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Call % Chg" Binding="{Binding CallPctChange, StringFormat={}{0:P2}}" IsReadOnly="True" />
+                    <DataGridTextColumn Header="Put % Chg" Binding="{Binding PutPctChange, StringFormat={}{0:P2}}" IsReadOnly="True" />
+                    <DataGridTemplateColumn Header="">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate DataType="{x:Type vm:StrikeRowViewModel}">
+                                <Button Content="✕" Command="{Binding RemoveCommand}" Padding="4,0" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Border Grid.Column="1" Margin="0,8,8,8" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="8,0,0,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Saved Evaluations" FontWeight="Bold" Margin="0,0,0,8" />
+                    <ListBox x:Name="SavedList"
+                             ItemsSource="{Binding SavedEvaluations}"
+                             DoubleTapped="OnSavedListDoubleTapped"
+                             SelectionMode="Single">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SavedEvaluationSummaryViewModel}">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Ticker}" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding ExpirationDate}" FontSize="11" Foreground="Gray" />
+                                        <TextBlock Text="{Binding SavedAt}" FontSize="11" Foreground="Gray" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="🗑"
+                                            Command="{Binding DeleteCommand}"
+                                            ToolTip.Tip="Delete"
+                                            Padding="4,2"
+                                            VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+</UserControl>

@@ -64,3 +64,70 @@ message ReanalyzeStockResponse { bool   queued  = 1; }
 
 message ReanalyzeAllRequest  {}
 message ReanalyzeAllResponse { int32 queued_count = 1; }
+
+// ── Options market data (new) ────────────────────────────────────────────────
+
+service OptionsMarketData {
+  rpc GetOptionExpirations (GetOptionExpirationsRequest) returns (GetOptionExpirationsResponse);
+  rpc GetOptionsChain      (GetOptionsChainRequest)      returns (GetOptionsChainResponse);
+}
+
+message GetOptionExpirationsRequest  { string ticker = 1; }
+message GetOptionExpirationsResponse { repeated string expiration_dates = 1; }  // YYYY-MM-DD, ascending
+
+message GetOptionsChainRequest {
+  string ticker          = 1;
+  string expiration_date = 2;  // YYYY-MM-DD
+}
+
+message OptionStrike {
+  double strike       = 1;
+  double call_premium = 2;
+  double put_premium  = 3;
+}
+
+message GetOptionsChainResponse {
+  double                underlying_price = 1;
+  repeated OptionStrike strikes          = 2;
+}
+
+// ── Options evaluations persistence (new) ────────────────────────────────────
+
+service OptionsEvaluations {
+  rpc SaveOptionsEvaluation   (SaveOptionsEvaluationRequest)   returns (SaveOptionsEvaluationResponse);
+  rpc GetOptionsEvaluations   (GetOptionsEvaluationsRequest)   returns (GetOptionsEvaluationsResponse);
+  rpc DeleteOptionsEvaluation (DeleteOptionsEvaluationRequest) returns (DeleteOptionsEvaluationResponse);
+}
+
+message OptionEvaluationStrikeRow {
+  double strike       = 1;
+  double call_premium = 2;
+  double put_premium  = 3;
+}
+
+message SaveOptionsEvaluationRequest {
+  string                             ticker          = 1;
+  string                             expiration_date  = 2;  // YYYY-MM-DD
+  double                             current_price   = 3;
+  double                             commission      = 4;
+  repeated OptionEvaluationStrikeRow strikes         = 5;
+}
+
+message SaveOptionsEvaluationResponse { int64 id = 1; }
+
+message GetOptionsEvaluationsRequest {}
+
+message OptionsEvaluationItem {
+  int64                              id              = 1;
+  string                             ticker          = 2;
+  string                             expiration_date = 3;
+  double                             current_price   = 4;
+  double                             commission      = 5;
+  string                             saved_at        = 6;  // ISO 8601 UTC
+  repeated OptionEvaluationStrikeRow strikes         = 7;
+}
+
+message GetOptionsEvaluationsResponse { repeated OptionsEvaluationItem items = 1; }
+
+message DeleteOptionsEvaluationRequest  { int64 id      = 1; }
+message DeleteOptionsEvaluationResponse { bool  deleted = 1; }

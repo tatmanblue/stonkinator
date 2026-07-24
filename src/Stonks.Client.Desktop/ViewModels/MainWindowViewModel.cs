@@ -11,6 +11,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public DashboardViewModel Dashboard { get; }
     public SearchAnalyzeViewModel SearchAnalyze { get; }
+    public OptionsEvaluatorViewModel OptionsEvaluator { get; }
 
     public int SelectedTabIndex
     {
@@ -18,10 +19,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         set => SetField(ref selectedTabIndex, value);
     }
 
-    public MainWindowViewModel(DashboardViewModel dashboard, SearchAnalyzeViewModel searchAnalyze)
+    public MainWindowViewModel(
+        DashboardViewModel dashboard,
+        SearchAnalyzeViewModel searchAnalyze,
+        OptionsEvaluatorViewModel optionsEvaluator)
     {
-        Dashboard     = dashboard;
-        SearchAnalyze = searchAnalyze;
+        Dashboard        = dashboard;
+        SearchAnalyze    = searchAnalyze;
+        OptionsEvaluator = optionsEvaluator;
 
         dashboard.ItemOpenRequested = item =>
         {

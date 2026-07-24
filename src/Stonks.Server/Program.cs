@@ -22,6 +22,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ICacheService, FileCacheService>();
 builder.Services.AddSingleton<IDatabase, SqliteDatabase>();
 builder.Services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
+builder.Services.AddSingleton<IOptionsEvaluationRepository, OptionsEvaluationRepository>();
 builder.Services.AddSingleton<IBadgeExtractor, KeywordBadgeExtractor>();
 
 builder.Services.AddSingleton<IMarketDataClient>(sp =>
@@ -34,6 +35,19 @@ builder.Services.AddSingleton<IMarketDataClient>(sp =>
         "finnhub" => (IMarketDataClient)new FinnhubClient(http, cache),
         "massive" => new MassiveClient(http, cache),
         "polygon" => new MassiveClient(http, cache),
+        _ => throw new InvalidOperationException($"Unknown STOCK_DATA_PROVIDER: '{provider}'. Valid values: massive, polygon, finnhub.")
+    };
+});
+
+builder.Services.AddSingleton<IOptionsDataClient>(sp =>
+{
+    var http     = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var cache    = sp.GetRequiredService<ICacheService>();
+    var provider = (Environment.GetEnvironmentVariable("STOCK_DATA_PROVIDER") ?? "massive").ToLowerInvariant();
+    return provider switch
+    {
+        "massive" or "polygon" => (IOptionsDataClient)new MassiveOptionsClient(http, cache),
+        "finnhub"               => new UnsupportedOptionsDataClient("finnhub"),
         _ => throw new InvalidOperationException($"Unknown STOCK_DATA_PROVIDER: '{provider}'. Valid values: massive, polygon, finnhub.")
     };
 });
@@ -58,4 +72,6 @@ await db.EnsureSchemaAsync();
 
 app.MapGrpcService<StocksAnalysisService>();
 app.MapGrpcService<StocksHistoryService>();
+app.MapGrpcService<OptionsMarketDataService>();
+app.MapGrpcService<OptionsEvaluationsService>();
 app.Run();

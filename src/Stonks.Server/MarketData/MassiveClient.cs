@@ -33,7 +33,7 @@ public class MassiveClient : IMarketDataClient
                   $"/{startDate:yyyy-MM-dd}/{endDate:yyyy-MM-dd}" +
                   $"?adjusted=true&sort=asc&limit=50000&apiKey={apiKey}";
 
-        var response = await SendWithRetryAsync(url, ct);
+        var response = await PolygonHttpHelper.SendWithRetryAsync(httpClient, url, ct);
         response.EnsureSuccessStatusCode();
 
         var raw = await response.Content.ReadFromJsonAsync<PolygonResponse>(cancellationToken: ct);
@@ -57,24 +57,6 @@ public class MassiveClient : IMarketDataClient
         cache.Set(cacheKey, bars, ttl);
 
         return bars.Select(ToProto).ToList();
-    }
-
-    private async Task<HttpResponseMessage> SendWithRetryAsync(string url, CancellationToken ct)
-    {
-        int[] backoffSeconds = [1, 2, 4];
-        HttpResponseMessage? response = null;
-        for (int attempt = 0; attempt <= backoffSeconds.Length; attempt++)
-        {
-            response = await httpClient.GetAsync(url, ct);
-            if (response.IsSuccessStatusCode ||
-                (response.StatusCode != System.Net.HttpStatusCode.ServiceUnavailable &&
-                 response.StatusCode != System.Net.HttpStatusCode.TooManyRequests))
-                return response;
-
-            if (attempt < backoffSeconds.Length)
-                await Task.Delay(TimeSpan.FromSeconds(backoffSeconds[attempt]), ct);
-        }
-        return response!;
     }
 
     private static OhlcvBar ToProto(OhlcvBarDto dto) => new()

@@ -14,6 +14,9 @@ public partial class MainWindow : Window
     private async void OnWindowOpened(object? sender, EventArgs e)
     {
         if (DataContext is MainWindowViewModel vm)
+        {
             await vm.Dashboard.LoadHistoryAsync();
+            await vm.OptionsEvaluator.LoadSavedEvaluationsAsync();
+        }
     }
 }

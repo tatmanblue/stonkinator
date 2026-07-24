@@ -82,6 +82,25 @@ public class SqliteDatabase : IDatabase
         await ExecuteAsync(
             @"CREATE INDEX IF NOT EXISTS stonks_idx_history_analyzed_at
               ON stonks_analysis_history (analyzed_at DESC)");
+
+        await ExecuteAsync(
+            @"CREATE TABLE IF NOT EXISTS stonks_options_evaluations (
+                id              INTEGER  PRIMARY KEY AUTOINCREMENT,
+                ticker          TEXT     NOT NULL,
+                expiration_date TEXT     NOT NULL,
+                current_price   REAL     NOT NULL,
+                commission      REAL     NOT NULL,
+                saved_at        TEXT     NOT NULL,
+                strikes_json    TEXT     NOT NULL
+            )");
+
+        await ExecuteAsync(
+            @"CREATE UNIQUE INDEX IF NOT EXISTS stonks_idx_options_eval_ticker_expiration
+              ON stonks_options_evaluations (ticker, expiration_date)");
+
+        await ExecuteAsync(
+            @"CREATE INDEX IF NOT EXISTS stonks_idx_options_eval_saved_at
+              ON stonks_options_evaluations (saved_at DESC)");
     }
 
     private static void BindParameters(SqliteCommand cmd, IReadOnlyDictionary<string, object?>? parameters)

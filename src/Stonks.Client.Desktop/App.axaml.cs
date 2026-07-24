@@ -23,13 +23,16 @@ public partial class App : Application
             var host = Environment.GetEnvironmentVariable("SERVER_HOST") ?? "localhost";
             var port = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "5001";
 
-            var channel        = GrpcChannel.ForAddress($"http://{host}:{port}");
-            var analysisClient = new StocksAnalysis.StocksAnalysisClient(channel);
-            var historyClient  = new StocksHistory.StocksHistoryClient(channel);
+            var channel              = GrpcChannel.ForAddress($"http://{host}:{port}");
+            var analysisClient       = new StocksAnalysis.StocksAnalysisClient(channel);
+            var historyClient        = new StocksHistory.StocksHistoryClient(channel);
+            var optionsMarketClient  = new OptionsMarketData.OptionsMarketDataClient(channel);
+            var optionsEvalClient    = new OptionsEvaluations.OptionsEvaluationsClient(channel);
 
-            var searchAnalyze = new SearchAnalyzeViewModel(analysisClient);
-            var dashboard     = new DashboardViewModel(historyClient, analysisClient);
-            var mainVm        = new MainWindowViewModel(dashboard, searchAnalyze);
+            var searchAnalyze    = new SearchAnalyzeViewModel(analysisClient);
+            var dashboard        = new DashboardViewModel(historyClient, analysisClient);
+            var optionsEvaluator = new OptionsEvaluatorViewModel(optionsMarketClient, optionsEvalClient);
+            var mainVm           = new MainWindowViewModel(dashboard, searchAnalyze, optionsEvaluator);
 
             desktop.MainWindow = new MainWindow { DataContext = mainVm };
         }
