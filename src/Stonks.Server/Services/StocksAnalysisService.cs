@@ -97,4 +97,32 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
             }
         }
     }
+
+    // Deliberately never reads or writes `repository` — follow-up Q&A must never be persisted.
+    public override async Task AskFollowUp(
+        AskFollowUpRequest request,
+        IServerStreamWriter<AskFollowUpResponse> responseStream,
+        ServerCallContext context)
+    {
+        logger.LogInformation("AskFollowUp: {Ticker} — {Question}", request.Ticker, request.Question);
+
+        try
+        {
+            await foreach (var chunk in aiClient.AskFollowUpAsync(
+                request.Ticker,
+                request.AnalysisText,
+                request.PriorTurns,
+                request.Question,
+                request.IncludeBars ? request.Bars : [],
+                context.CancellationToken))
+            {
+                await responseStream.WriteAsync(new AskFollowUpResponse { AnswerChunk = chunk });
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Follow-up AI request failed for {Ticker}", request.Ticker);
+            await responseStream.WriteAsync(new AskFollowUpResponse { ErrorMessage = $"Follow-up failed: {ex.Message}" });
+        }
+    }
 }

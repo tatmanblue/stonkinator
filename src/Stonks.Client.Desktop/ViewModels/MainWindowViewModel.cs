@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Stonks.Client.Desktop.Settings;
 
 namespace Stonks.Client.Desktop.ViewModels;
 
@@ -12,6 +13,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public DashboardViewModel Dashboard { get; }
     public SearchAnalyzeViewModel SearchAnalyze { get; }
     public OptionsEvaluatorViewModel OptionsEvaluator { get; }
+    public AppSettingsService SettingsService { get; }
 
     public int SelectedTabIndex
     {
@@ -22,11 +24,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public MainWindowViewModel(
         DashboardViewModel dashboard,
         SearchAnalyzeViewModel searchAnalyze,
-        OptionsEvaluatorViewModel optionsEvaluator)
+        OptionsEvaluatorViewModel optionsEvaluator,
+        AppSettingsService settingsService)
     {
         Dashboard        = dashboard;
         SearchAnalyze    = searchAnalyze;
         OptionsEvaluator = optionsEvaluator;
+        SettingsService  = settingsService;
 
         dashboard.ItemOpenRequested = item =>
         {

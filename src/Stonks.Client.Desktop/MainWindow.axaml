@@ -7,9 +7,14 @@
         Width="1200" Height="700"
         MinWidth="800" MinHeight="500">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex}">
+        <!-- Top toolbar -->
+        <Border Grid.Row="0" Background="#F0F0F0" Padding="8,4">
+            <Button Content="Settings" HorizontalAlignment="Right" Click="OnSettingsClick" />
+        </Border>
+
+        <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
 
             <TabItem Header="Dashboard">
                 <views:DashboardView DataContext="{Binding Dashboard}" />
@@ -26,7 +31,7 @@
         </TabControl>
 
         <!-- Disclaimer bar — always visible outside the tabs -->
-        <Border Grid.Row="1" Background="#FFF3CD" Padding="8">
+        <Border Grid.Row="2" Background="#FFF3CD" Padding="8">
             <TextBlock Text="For educational purposes only. Not financial advice."
                        HorizontalAlignment="Center"
                        FontStyle="Italic" />

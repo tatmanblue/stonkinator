@@ -53,6 +53,34 @@ public class GeminiClient : IAiClient
             yield break;
         }
 
+        var fullText = new StringBuilder();
+        await foreach (var chunk in StreamGeminiResponseAsync(prompt, ct))
+        {
+            fullText.Append(chunk);
+            yield return chunk;
+        }
+
+        if (cacheResults && fullText.Length > 0)
+            cache.Set(cacheKey, fullText.ToString());
+    }
+
+    // Follow-up Q&A is intentionally never cached: the prompt hash includes free-form
+    // question text and growing conversation history, so it's effectively unique per
+    // call — caching would only ever write, never hit, and would leave "not persisted"
+    // Q&A text sitting on disk indefinitely (FileCacheService entries have no expiry).
+    public async IAsyncEnumerable<string> AskFollowUpAsync(
+        string ticker, string analysisText, IReadOnlyList<QaTurn> priorTurns,
+        string question, IReadOnlyList<OhlcvBar> bars,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var prompt = BuildFollowUpPrompt(ticker, analysisText, priorTurns, question, bars);
+        await foreach (var chunk in StreamGeminiResponseAsync(prompt, ct))
+            yield return chunk;
+    }
+
+    private async IAsyncEnumerable<string> StreamGeminiResponseAsync(
+        string prompt, [EnumeratorCancellation] CancellationToken ct)
+    {
         var response = await SendWithRetryAsync(prompt, ct);
 
         try
@@ -60,8 +88,7 @@ public class GeminiClient : IAiClient
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var reader = new StreamReader(stream);
 
-            var fullText = new StringBuilder();
-            var buffer   = new StringBuilder();
+            var buffer = new StringBuilder();
 
             while (!ct.IsCancellationRequested)
             {
@@ -74,10 +101,7 @@ public class GeminiClient : IAiClient
                     {
                         var chunk = TryExtractText(buffer.ToString());
                         if (chunk is not null)
-                        {
-                            fullText.Append(chunk);
                             yield return chunk;
-                        }
                         buffer.Clear();
                     }
                     continue;
@@ -90,14 +114,8 @@ public class GeminiClient : IAiClient
             {
                 var chunk = TryExtractText(buffer.ToString());
                 if (chunk is not null)
-                {
-                    fullText.Append(chunk);
                     yield return chunk;
-                }
             }
-
-            if (cacheResults && fullText.Length > 0)
-                cache.Set(cacheKey, fullText.ToString());
         }
         finally
         {
@@ -155,7 +173,17 @@ public class GeminiClient : IAiClient
                 continue;
             }
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var statusCode = response.StatusCode;
+                var errorBody  = await response.Content.ReadAsStringAsync(ct);
+                response.Dispose();
+
+                logger.LogError("Gemini request failed with {StatusCode}: {Body}", statusCode, errorBody);
+                throw new HttpRequestException(
+                    $"Gemini request failed ({(int)statusCode} {statusCode}): {Truncate(errorBody, 500)}");
+            }
+
             return response;
         }
 
@@ -198,6 +226,47 @@ public class GeminiClient : IAiClient
         sb.AppendLine("Provide your analysis in clear, structured paragraphs.");
         return sb.ToString();
     }
+
+    private static string BuildFollowUpPrompt(
+        string ticker, string analysisText, IReadOnlyList<QaTurn> priorTurns,
+        string question, IReadOnlyList<OhlcvBar> bars)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"You are an expert technical analyst continuing a conversation about {ticker}.");
+        sb.AppendLine("Below is your original analysis, followed by any prior follow-up questions and your");
+        sb.AppendLine("answers. Use this context to answer the new question concisely and directly.");
+        sb.AppendLine();
+        sb.AppendLine("=== Original Analysis ===");
+        sb.AppendLine(analysisText);
+        sb.AppendLine();
+
+        if (priorTurns.Count > 0)
+        {
+            sb.AppendLine("=== Prior Follow-Up Q&A ===");
+            foreach (var turn in priorTurns)
+            {
+                sb.AppendLine($"Q: {turn.Question}");
+                sb.AppendLine($"A: {turn.Answer}");
+                sb.AppendLine();
+            }
+        }
+
+        if (bars.Count > 0)
+        {
+            sb.AppendLine("=== Underlying OHLCV Data ===");
+            sb.AppendLine("Date,Open,High,Low,Close,Volume");
+            foreach (var bar in bars.Take(500))
+                sb.AppendLine($"{bar.Date},{bar.Open},{bar.High},{bar.Low},{bar.Close},{bar.Volume}");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("=== New Question ===");
+        sb.AppendLine(question);
+        return sb.ToString();
+    }
+
+    private static string Truncate(string text, int maxLength) =>
+        text.Length <= maxLength ? text : text[..maxLength] + "...";
 
     private static string ComputeHash(string input)
     {

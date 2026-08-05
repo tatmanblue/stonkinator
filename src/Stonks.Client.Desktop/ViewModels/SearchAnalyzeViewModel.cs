@@ -1,8 +1,10 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Grpc.Core;
+using Stonks.Client.Desktop.Settings;
 using Stonks.Shared.Grpc;
 
 namespace Stonks.Client.Desktop.ViewModels;
@@ -10,6 +12,7 @@ namespace Stonks.Client.Desktop.ViewModels;
 public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
 {
     private readonly StocksAnalysis.StocksAnalysisClient grpcClient;
+    private readonly AppSettingsService settingsService;
 
     private string ticker = "AAPL";
     private DateTimeOffset? startDate = DateTimeOffset.Now.AddMonths(-3);
@@ -19,13 +22,18 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     private string? errorMessage;
     private bool isLoading;
     private OhlcvBar[] chartBars = [];
+    private string followUpQuestion = "";
+    private bool isAskingFollowUp;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public SearchAnalyzeViewModel(StocksAnalysis.StocksAnalysisClient grpcClient)
+    public SearchAnalyzeViewModel(StocksAnalysis.StocksAnalysisClient grpcClient, AppSettingsService settingsService)
     {
         this.grpcClient = grpcClient;
+        this.settingsService = settingsService;
         AnalyzeCommand = new AsyncCommand(RunAnalysisAsync);
+        AskFollowUpCommand = new AsyncCommand(AskFollowUpAsync,
+            () => !isAskingFollowUp && !string.IsNullOrWhiteSpace(followUpQuestion));
     }
 
     public string Ticker
@@ -86,7 +94,31 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         set => SetField(ref chartBars, value);
     }
 
+    public string FollowUpQuestion
+    {
+        get => followUpQuestion;
+        set
+        {
+            SetField(ref followUpQuestion, value);
+            (AskFollowUpCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsAskingFollowUp
+    {
+        get => isAskingFollowUp;
+        set
+        {
+            SetField(ref isAskingFollowUp, value);
+            (AskFollowUpCommand as AsyncCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+
+    public ObservableCollection<QaTurnViewModel> FollowUpTurns { get; } = new();
+
     public ICommand AnalyzeCommand { get; }
+
+    public ICommand AskFollowUpCommand { get; }
 
     public Func<Task>? AnalysisCompleted { get; set; }
 
@@ -100,6 +132,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         AnalysisText = item.AiResultText;
         ChartBars = [];
         ErrorMessage = null;
+        FollowUpTurns.Clear();
     }
 
     private async Task RunAnalysisAsync()
@@ -109,6 +142,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         AnalysisText = "";
         ChartBars = [];
         ErrorMessage = null;
+        FollowUpTurns.Clear();
 
         try
         {
@@ -160,6 +194,63 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
 
         if (ErrorMessage is null && AnalysisCompleted is not null)
             await AnalysisCompleted();
+    }
+
+    private async Task AskFollowUpAsync()
+    {
+        var question = FollowUpQuestion.Trim();
+        if (question.Length == 0) return;
+
+        var turn = new QaTurnViewModel(question);
+        var priorTurns = FollowUpTurns.ToArray(); // snapshot before adding the new turn
+        FollowUpTurns.Add(turn);
+        FollowUpQuestion = "";
+        IsAskingFollowUp = true;
+
+        try
+        {
+            var includeBars = settingsService.Current.IncludeOhlcvInFollowUp;
+            var request = new AskFollowUpRequest
+            {
+                Ticker       = Ticker.Trim().ToUpper(),
+                AnalysisText = AnalysisText,
+                Question     = question,
+                IncludeBars  = includeBars,
+            };
+            request.PriorTurns.AddRange(priorTurns.Select(t => new QaTurn { Question = t.Question, Answer = t.Answer }));
+            if (includeBars)
+                request.Bars.AddRange(ChartBars);
+
+            using var call = grpcClient.AskFollowUp(request);
+            await foreach (var response in call.ResponseStream.ReadAllAsync())
+            {
+                switch (response.PayloadCase)
+                {
+                    case AskFollowUpResponse.PayloadOneofCase.AnswerChunk:
+                        var chunk = response.AnswerChunk;
+                        Dispatcher.UIThread.Post(() => turn.AppendAnswerChunk(chunk));
+                        break;
+
+                    case AskFollowUpResponse.PayloadOneofCase.ErrorMessage:
+                        var errMsg = response.ErrorMessage;
+                        Dispatcher.UIThread.Post(() => turn.AppendAnswerChunk($"\n\n[Error: {errMsg}]"));
+                        break;
+                }
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            turn.AppendAnswerChunk("[Could not connect to server.]");
+        }
+        catch (Exception ex)
+        {
+            turn.AppendAnswerChunk($"[Follow-up failed: {ex.Message}]");
+        }
+        finally
+        {
+            turn.IsAnswering = false;
+            IsAskingFollowUp = false;
+        }
     }
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)

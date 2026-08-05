@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Stonks.Client.Desktop.Views.SettingsWindow"
+        x:CompileBindings="False"
+        Title="Settings"
+        Width="420"
+        SizeToContent="Height"
+        CanResize="False">
+
+    <StackPanel Margin="16" Spacing="12">
+        <CheckBox IsChecked="{Binding IncludeOhlcvInFollowUp}">
+            <TextBlock Text="Include price/volume (OHLCV) data as extra context for follow-up questions"
+                       TextWrapping="Wrap" />
+        </CheckBox>
+        <TextBlock Text="Off by default to keep prompts small."
+                   FontStyle="Italic"
+                   Foreground="Gray"
+                   TextWrapping="Wrap" />
+        <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Right" />
+    </StackPanel>
+
+</Window>

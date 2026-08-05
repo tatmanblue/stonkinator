@@ -8,6 +8,7 @@ package stonks;
 
 service StocksAnalysis {
   rpc AnalyzeStock (AnalyzeStockRequest) returns (stream AnalyzeStockResponse);
+  rpc AskFollowUp  (AskFollowUpRequest)  returns (stream AskFollowUpResponse);
 }
 
 message AnalyzeStockRequest {
@@ -36,6 +37,27 @@ message OhlcvBar {
 message OhlcvData {
   string            ticker = 1;
   repeated OhlcvBar bars   = 2;
+}
+
+message QaTurn {
+  string question = 1;
+  string answer   = 2;
+}
+
+message AskFollowUpRequest {
+  string            ticker        = 1;
+  string            analysis_text = 2;
+  repeated QaTurn   prior_turns   = 3;  // all previous Q&A pairs from this session (not persisted)
+  string            question      = 4;
+  bool              include_bars  = 5;  // mirrors the client-side setting
+  repeated OhlcvBar bars          = 6;  // only populated by the client when include_bars is true
+}
+
+message AskFollowUpResponse {
+  oneof payload {
+    string answer_chunk  = 1;
+    string error_message = 2;
+  }
 }
 
 // ── History service (new) ────────────────────────────────────────────────────

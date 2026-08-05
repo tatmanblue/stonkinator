@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Grpc.Net.Client;
+using Stonks.Client.Desktop.Settings;
 using Stonks.Client.Desktop.ViewModels;
 using Stonks.Shared.Grpc;
 
@@ -29,10 +30,13 @@ public partial class App : Application
             var optionsMarketClient  = new OptionsMarketData.OptionsMarketDataClient(channel);
             var optionsEvalClient    = new OptionsEvaluations.OptionsEvaluationsClient(channel);
 
-            var searchAnalyze    = new SearchAnalyzeViewModel(analysisClient);
+            var settingsService = new AppSettingsService();
+            settingsService.Load();
+
+            var searchAnalyze    = new SearchAnalyzeViewModel(analysisClient, settingsService);
             var dashboard        = new DashboardViewModel(historyClient, analysisClient);
             var optionsEvaluator = new OptionsEvaluatorViewModel(optionsMarketClient, optionsEvalClient);
-            var mainVm           = new MainWindowViewModel(dashboard, searchAnalyze, optionsEvaluator);
+            var mainVm           = new MainWindowViewModel(dashboard, searchAnalyze, optionsEvaluator, settingsService);
 
             desktop.MainWindow = new MainWindow { DataContext = mainVm };
         }
