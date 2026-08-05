@@ -98,6 +98,30 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         }
     }
 
+    // History items don't persist their bars, so reopening one re-fetches them here rather
+    // than through the streaming AnalyzeStock (which would also re-run and re-save the AI analysis).
+    public override async Task<GetOhlcvBarsResponse> GetOhlcvBars(
+        GetOhlcvBarsRequest request, ServerCallContext context)
+    {
+        if (!DateOnly.TryParse(request.StartDate, out var start))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"Invalid start_date: '{request.StartDate}'."));
+        if (!DateOnly.TryParse(request.EndDate, out var end))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"Invalid end_date: '{request.EndDate}'."));
+
+        try
+        {
+            var bars = await marketDataClient.GetOhlcvAsync(request.Ticker, start, end, context.CancellationToken);
+            var response = new GetOhlcvBarsResponse();
+            response.Bars.AddRange(bars);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fetch OHLCV bars for {Ticker}", request.Ticker);
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, $"Market data fetch failed: {ex.Message}"));
+        }
+    }
+
     // Deliberately never reads or writes `repository` — follow-up Q&A must never be persisted.
     public override async Task AskFollowUp(
         AskFollowUpRequest request,

@@ -7,8 +7,9 @@ package stonks;
 // ── Existing service (unchanged) ────────────────────────────────────────────
 
 service StocksAnalysis {
-  rpc AnalyzeStock (AnalyzeStockRequest) returns (stream AnalyzeStockResponse);
-  rpc AskFollowUp  (AskFollowUpRequest)  returns (stream AskFollowUpResponse);
+  rpc AnalyzeStock  (AnalyzeStockRequest)  returns (stream AnalyzeStockResponse);
+  rpc AskFollowUp   (AskFollowUpRequest)   returns (stream AskFollowUpResponse);
+  rpc GetOhlcvBars  (GetOhlcvBarsRequest)  returns (GetOhlcvBarsResponse);
 }
 
 message AnalyzeStockRequest {
@@ -37,6 +38,18 @@ message OhlcvBar {
 message OhlcvData {
   string            ticker = 1;
   repeated OhlcvBar bars   = 2;
+}
+
+// Re-fetches bars for a ticker/date range that isn't backed by an active analysis stream
+// (e.g. reopening a history item, whose bars are never persisted).
+message GetOhlcvBarsRequest {
+  string ticker     = 1;
+  string start_date = 2;  // YYYY-MM-DD
+  string end_date   = 3;  // YYYY-MM-DD
+}
+
+message GetOhlcvBarsResponse {
+  repeated OhlcvBar bars = 1;
 }
 
 message QaTurn {

@@ -122,7 +122,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
 
     public Func<Task>? AnalysisCompleted { get; set; }
 
-    public void LoadFromHistory(AnalysisHistoryItemViewModel item)
+    public async Task LoadFromHistoryAsync(AnalysisHistoryItemViewModel item)
     {
         Ticker = item.Ticker;
         if (DateTimeOffset.TryParse(item.StartDate, out var start))
@@ -133,6 +133,32 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         ChartBars = [];
         ErrorMessage = null;
         FollowUpTurns.Clear();
+
+        // History records don't persist bars, so re-fetch them to populate the chart.
+        IsLoading = true;
+        try
+        {
+            var request = new GetOhlcvBarsRequest
+            {
+                Ticker    = item.Ticker,
+                StartDate = item.StartDate,
+                EndDate   = item.EndDate,
+            };
+            var response = await grpcClient.GetOhlcvBarsAsync(request);
+            ChartBars = response.Bars.ToArray();
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+        {
+            ErrorMessage = "Could not connect to server. Check that the server is running.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load chart data: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task RunAnalysisAsync()

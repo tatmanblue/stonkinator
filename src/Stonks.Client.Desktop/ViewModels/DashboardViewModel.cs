@@ -17,7 +17,7 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public Action<AnalysisHistoryItemViewModel>? ItemOpenRequested { get; set; }
+    public Func<AnalysisHistoryItemViewModel, Task>? ItemOpenRequested { get; set; }
 
     public ObservableCollection<AnalysisHistoryItemViewModel> Items { get; } = new();
 
@@ -57,9 +57,10 @@ public sealed class DashboardViewModel : INotifyPropertyChanged
         ReanalyzeAllCommand = new AsyncCommand(ReanalyzeAllAsync, () => !isRefreshing);
     }
 
-    public void OpenItem(AnalysisHistoryItemViewModel item)
+    public async void OpenItem(AnalysisHistoryItemViewModel item)
     {
-        ItemOpenRequested?.Invoke(item);
+        if (ItemOpenRequested is not null)
+            await ItemOpenRequested(item);
     }
 
     public async Task LoadHistoryAsync()

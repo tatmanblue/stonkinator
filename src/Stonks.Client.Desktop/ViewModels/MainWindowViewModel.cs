@@ -32,10 +32,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         OptionsEvaluator = optionsEvaluator;
         SettingsService  = settingsService;
 
-        dashboard.ItemOpenRequested = item =>
+        dashboard.ItemOpenRequested = async item =>
         {
-            searchAnalyze.LoadFromHistory(item);
             SelectedTabIndex = 1;
+            await searchAnalyze.LoadFromHistoryAsync(item);
         };
 
         searchAnalyze.AnalysisCompleted = dashboard.LoadHistoryAsync;

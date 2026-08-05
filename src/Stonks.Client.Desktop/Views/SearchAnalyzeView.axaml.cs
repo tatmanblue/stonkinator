@@ -39,6 +39,15 @@ public partial class SearchAnalyzeView : UserControl
             await clipboard.SetTextAsync(viewModel.AnalysisText);
     }
 
+    private async void OnCopyQaTurnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: QaTurnViewModel turn }) return;
+
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null)
+            await clipboard.SetTextAsync($"Q: {turn.Question}\n\nA: {turn.Answer}");
+    }
+
     private void UpdateChart(OhlcvBar[] bars)
     {
         if (bars.Length == 0)
