@@ -24,6 +24,8 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     private OhlcvBar[] chartBars = [];
     private string followUpQuestion = "";
     private bool isAskingFollowUp;
+    private TechnicalIndicatorsViewModel? indicators;
+    private bool isTechnicalsPanelExpanded = true;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -34,6 +36,11 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         AnalyzeCommand = new AsyncCommand(RunAnalysisAsync);
         AskFollowUpCommand = new AsyncCommand(AskFollowUpAsync,
             () => !isAskingFollowUp && !string.IsNullOrWhiteSpace(followUpQuestion));
+        ToggleTechnicalsPanelCommand = new AsyncCommand(() =>
+        {
+            IsTechnicalsPanelExpanded = !IsTechnicalsPanelExpanded;
+            return Task.CompletedTask;
+        });
     }
 
     public string Ticker
@@ -114,11 +121,31 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         }
     }
 
+    public TechnicalIndicatorsViewModel? Indicators
+    {
+        get => indicators;
+        set
+        {
+            SetField(ref indicators, value);
+            OnPropertyChanged(nameof(HasIndicators));
+        }
+    }
+
+    public bool HasIndicators => indicators is not null;
+
+    public bool IsTechnicalsPanelExpanded
+    {
+        get => isTechnicalsPanelExpanded;
+        set => SetField(ref isTechnicalsPanelExpanded, value);
+    }
+
     public ObservableCollection<QaTurnViewModel> FollowUpTurns { get; } = new();
 
     public ICommand AnalyzeCommand { get; }
 
     public ICommand AskFollowUpCommand { get; }
+
+    public ICommand ToggleTechnicalsPanelCommand { get; }
 
     public Func<Task>? AnalysisCompleted { get; set; }
 
@@ -131,6 +158,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
             EndDate = end;
         AnalysisText = item.AiResultText;
         ChartBars = [];
+        Indicators = null;
         ErrorMessage = null;
         FollowUpTurns.Clear();
 
@@ -146,6 +174,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
             };
             var response = await grpcClient.GetOhlcvBarsAsync(request);
             ChartBars = response.Bars.ToArray();
+            Indicators = new TechnicalIndicatorsViewModel(response.Indicators);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
@@ -167,6 +196,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
         rawBuffer = "";
         AnalysisText = "";
         ChartBars = [];
+        Indicators = null;
         ErrorMessage = null;
         FollowUpTurns.Clear();
 
@@ -187,6 +217,11 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
                     case AnalyzeStockResponse.PayloadOneofCase.OhlcvData:
                         var bars = response.OhlcvData.Bars.ToArray();
                         Dispatcher.UIThread.Post(() => ChartBars = bars);
+                        break;
+
+                    case AnalyzeStockResponse.PayloadOneofCase.TechnicalIndicators:
+                        var indicatorsVm = new TechnicalIndicatorsViewModel(response.TechnicalIndicators);
+                        Dispatcher.UIThread.Post(() => Indicators = indicatorsVm);
                         break;
 
                     case AnalyzeStockResponse.PayloadOneofCase.AnalysisChunk:

@@ -38,10 +38,10 @@ public class GeminiClient : IAiClient
     }
 
     public async IAsyncEnumerable<string> AnalyzeAsync(
-        string ticker, IReadOnlyList<OhlcvBar> bars,
+        string ticker, IReadOnlyList<OhlcvBar> bars, TechnicalIndicators indicators,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var prompt = BuildPrompt(ticker, bars);
+        var prompt = BuildPrompt(ticker, bars, indicators);
         var promptHash = ComputeHash(prompt);
         var startDate = bars.FirstOrDefault()?.Date ?? "";
         var endDate   = bars.LastOrDefault()?.Date  ?? "";
@@ -208,7 +208,7 @@ public class GeminiClient : IAiClient
         }
     }
 
-    private static string BuildPrompt(string ticker, IReadOnlyList<OhlcvBar> bars)
+    private static string BuildPrompt(string ticker, IReadOnlyList<OhlcvBar> bars, TechnicalIndicators indicators)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"You are an expert technical analyst. Analyze the following daily OHLCV data for {ticker}");
@@ -219,12 +219,49 @@ public class GeminiClient : IAiClient
         if (bars.Count > 0)
             sb.AppendLine($"Date Range: {bars[0].Date} to {bars[^1].Date}");
         sb.AppendLine();
+        AppendIndicatorsBlock(sb, indicators);
         sb.AppendLine("Date,Open,High,Low,Close,Volume");
         foreach (var bar in bars.Take(500))
             sb.AppendLine($"{bar.Date},{bar.Open},{bar.High},{bar.Low},{bar.Close},{bar.Volume}");
         sb.AppendLine();
         sb.AppendLine("Provide your analysis in clear, structured paragraphs.");
         return sb.ToString();
+    }
+
+    private static void AppendIndicatorsBlock(StringBuilder sb, TechnicalIndicators indicators)
+    {
+        var hasAnyIndicator = indicators.MovingAverages.Count > 0 || indicators.HasRsi
+            || indicators.HasMacd || indicators.HasStochastic || indicators.HasWilliamsR
+            || indicators.SupportLevels.Count > 0 || indicators.ResistanceLevels.Count > 0;
+        if (!hasAnyIndicator) return;
+
+        sb.AppendLine("Current Technical Indicators (already computed from a longer price history than the");
+        sb.AppendLine("CSV below — use these values directly rather than estimating your own):");
+
+        foreach (var ma in indicators.MovingAverages)
+            sb.AppendLine($"SMA({ma.Period}): {ma.Value:F2} (price is {(ma.AbovePrice ? "above" : "below")})");
+        if (indicators.HasGoldenCross) sb.AppendLine("Golden Cross: SMA50 is above SMA200 (bullish)");
+        if (indicators.HasDeathCross) sb.AppendLine("Death Cross: SMA50 is below SMA200 (bearish)");
+
+        if (indicators.HasRsi)
+            sb.AppendLine($"RSI(14): {indicators.Rsi14:F1}");
+
+        if (indicators.HasMacd)
+            sb.AppendLine($"MACD(12,26,9): line {indicators.MacdLine:F2}, signal {indicators.MacdSignal:F2}, " +
+                           $"histogram {indicators.MacdHistogram:F2}");
+
+        if (indicators.HasStochastic)
+            sb.AppendLine($"Stochastic %K/%D: {indicators.StochasticK:F1} / {indicators.StochasticD:F1}");
+
+        if (indicators.HasWilliamsR)
+            sb.AppendLine($"Williams %R: {indicators.WilliamsR:F1}");
+
+        if (indicators.SupportLevels.Count > 0)
+            sb.AppendLine("Support: " + string.Join(", ", indicators.SupportLevels.Select(l => $"${l.Price:F2}")));
+        if (indicators.ResistanceLevels.Count > 0)
+            sb.AppendLine("Resistance: " + string.Join(", ", indicators.ResistanceLevels.Select(l => $"${l.Price:F2}")));
+
+        sb.AppendLine();
     }
 
     private static string BuildFollowUpPrompt(

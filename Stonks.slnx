@@ -4,5 +4,6 @@
     <Project Path="src/Stonks.Server/Stonks.Server.csproj" />
     <Project Path="src/Stonks.Shared/Stonks.Shared.csproj" />
     <Project Path="src/Stonks.Shared.Tests/Stonks.Shared.Tests.csproj" />
+    <Project Path="src/Stonks.Server.Tests/Stonks.Server.Tests.csproj" />
   </Folder>
 </Solution>

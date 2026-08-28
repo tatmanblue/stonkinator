@@ -2,6 +2,7 @@ using System.Text;
 using Grpc.Core;
 using Stonks.Server.Ai;
 using Stonks.Server.Badges;
+using Stonks.Server.Indicators;
 using Stonks.Server.MarketData;
 using Stonks.Server.Repositories;
 using Stonks.Shared.Grpc;
@@ -10,10 +11,16 @@ namespace Stonks.Server.Services;
 
 public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
 {
+    // Indicators (esp. SMA200) need more history than the user's selected chart range, so
+    // indicator math always runs over this much lookback ending at the requested end date,
+    // regardless of what range gets streamed to the chart.
+    private const int INDICATOR_LOOKBACK_DAYS = 400;
+
     private readonly IMarketDataClient marketDataClient;
     private readonly IAiClient aiClient;
     private readonly IAnalysisRepository repository;
     private readonly IBadgeExtractor badgeExtractor;
+    private readonly ITechnicalIndicatorCalculator indicatorCalculator;
     private readonly ILogger<StocksAnalysisService> logger;
 
     public StocksAnalysisService(
@@ -21,13 +28,23 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         IAiClient aiClient,
         IAnalysisRepository repository,
         IBadgeExtractor badgeExtractor,
+        ITechnicalIndicatorCalculator indicatorCalculator,
         ILogger<StocksAnalysisService> logger)
     {
         this.marketDataClient = marketDataClient;
         this.aiClient = aiClient;
         this.repository = repository;
         this.badgeExtractor = badgeExtractor;
+        this.indicatorCalculator = indicatorCalculator;
         this.logger = logger;
+    }
+
+    private async Task<TechnicalIndicators> CalculateIndicatorsAsync(
+        string ticker, DateOnly endDate, CancellationToken ct)
+    {
+        var lookbackStart = endDate.AddDays(-INDICATOR_LOOKBACK_DAYS);
+        var lookbackBars = await marketDataClient.GetOhlcvAsync(ticker, lookbackStart, endDate, ct);
+        return indicatorCalculator.Calculate(lookbackBars);
     }
 
     public override async Task AnalyzeStock(
@@ -56,11 +73,24 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         ohlcvData.Bars.AddRange(bars);
         await responseStream.WriteAsync(new AnalyzeStockResponse { OhlcvData = ohlcvData });
 
+        TechnicalIndicators indicators;
+        try
+        {
+            var end = DateOnly.Parse(request.EndDate);
+            indicators = await CalculateIndicatorsAsync(request.Ticker, end, context.CancellationToken);
+            await responseStream.WriteAsync(new AnalyzeStockResponse { TechnicalIndicators = indicators });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to compute technical indicators for {Ticker}", request.Ticker);
+            indicators = new TechnicalIndicators();
+        }
+
         var fullText = new StringBuilder();
         bool analysisSucceeded = false;
         try
         {
-            await foreach (var chunk in aiClient.AnalyzeAsync(request.Ticker, bars, context.CancellationToken))
+            await foreach (var chunk in aiClient.AnalyzeAsync(request.Ticker, bars, indicators, context.CancellationToken))
             {
                 fullText.Append(chunk);
                 await responseStream.WriteAsync(new AnalyzeStockResponse { AnalysisChunk = chunk });
@@ -113,6 +143,7 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
             var bars = await marketDataClient.GetOhlcvAsync(request.Ticker, start, end, context.CancellationToken);
             var response = new GetOhlcvBarsResponse();
             response.Bars.AddRange(bars);
+            response.Indicators = await CalculateIndicatorsAsync(request.Ticker, end, context.CancellationToken);
             return response;
         }
         catch (Exception ex)

@@ -20,9 +20,10 @@ message AnalyzeStockRequest {
 
 message AnalyzeStockResponse {
   oneof payload {
-    OhlcvData   ohlcv_data     = 1;
-    string      analysis_chunk = 2;
-    string      error_message  = 3;
+    OhlcvData            ohlcv_data           = 1;
+    string               analysis_chunk       = 2;
+    string               error_message        = 3;
+    TechnicalIndicators  technical_indicators = 4;
   }
 }
 
@@ -40,6 +41,42 @@ message OhlcvData {
   repeated OhlcvBar bars   = 2;
 }
 
+// Computed technical indicators (moving averages, momentum oscillators, support/resistance).
+// Individual fields are only populated (has_* = true) when enough history was available to
+// compute them.
+message TechnicalIndicators {
+  message MovingAverage {
+    int32  period       = 1;
+    double value        = 2;
+    bool   above_price  = 3;
+  }
+  message SupportResistanceLevel {
+    double price = 1;
+  }
+
+  repeated MovingAverage moving_averages  = 1;  // SMA20/50/200, only those with enough data
+  bool   has_golden_cross = 2;                  // SMA50 crossed above SMA200
+  bool   has_death_cross  = 3;                  // SMA50 crossed below SMA200
+
+  bool   has_rsi = 4;
+  double rsi_14  = 5;
+
+  bool   has_macd       = 6;
+  double macd_line      = 7;
+  double macd_signal    = 8;
+  double macd_histogram = 9;
+
+  bool   has_stochastic = 10;
+  double stochastic_k   = 11;
+  double stochastic_d   = 12;
+
+  bool   has_williams_r = 13;
+  double williams_r     = 14;
+
+  repeated SupportResistanceLevel support_levels    = 15;
+  repeated SupportResistanceLevel resistance_levels = 16;
+}
+
 // Re-fetches bars for a ticker/date range that isn't backed by an active analysis stream
 // (e.g. reopening a history item, whose bars are never persisted).
 message GetOhlcvBarsRequest {
@@ -49,7 +86,8 @@ message GetOhlcvBarsRequest {
 }
 
 message GetOhlcvBarsResponse {
-  repeated OhlcvBar bars = 1;
+  repeated OhlcvBar    bars       = 1;
+  TechnicalIndicators  indicators = 2;
 }
 
 message QaTurn {

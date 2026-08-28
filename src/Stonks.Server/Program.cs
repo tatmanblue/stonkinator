@@ -3,6 +3,7 @@ using Stonks.Server.Ai;
 using Stonks.Server.Badges;
 using Stonks.Server.Cache;
 using Stonks.Server.Data;
+using Stonks.Server.Indicators;
 using Stonks.Server.MarketData;
 using Stonks.Server.Repositories;
 using Stonks.Server.Services;
@@ -24,6 +25,7 @@ builder.Services.AddSingleton<IDatabase, SqliteDatabase>();
 builder.Services.AddSingleton<IAnalysisRepository, AnalysisRepository>();
 builder.Services.AddSingleton<IOptionsEvaluationRepository, OptionsEvaluationRepository>();
 builder.Services.AddSingleton<IBadgeExtractor, KeywordBadgeExtractor>();
+builder.Services.AddSingleton<ITechnicalIndicatorCalculator, TechnicalIndicatorCalculator>();
 
 builder.Services.AddSingleton<IMarketDataClient>(sp =>
 {

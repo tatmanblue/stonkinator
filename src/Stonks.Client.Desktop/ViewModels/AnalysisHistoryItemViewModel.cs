@@ -13,10 +13,11 @@ public sealed class BadgeViewModel
         Name = name;
         Color = name switch
         {
-            "Oversold" or "Overbought" => "#FFF3CD",
-            "Uptrend"                  => "#D4EDDA",
-            "Downtrend"                => "#F8D7DA",
-            _                          => "#E2E3E5",
+            "Oversold" or "Overbought" or "RSI Oversold" or "RSI Overbought"
+                or "Stoch Oversold" or "Stoch Overbought" => "#FFF3CD",
+            "Uptrend" or "Golden Cross" or "MACD: Buy"    => "#D4EDDA",
+            "Downtrend" or "Death Cross" or "MACD: Sell"  => "#F8D7DA",
+            _                                              => "#E2E3E5",
         };
     }
 }

@@ -5,7 +5,7 @@ namespace Stonks.Server.Ai;
 public interface IAiClient
 {
     IAsyncEnumerable<string> AnalyzeAsync(
-        string ticker, IReadOnlyList<OhlcvBar> bars,
+        string ticker, IReadOnlyList<OhlcvBar> bars, TechnicalIndicators indicators,
         CancellationToken ct = default);
 
     IAsyncEnumerable<string> AskFollowUpAsync(

@@ -49,7 +49,94 @@
                 <ColumnDefinition Width="1.5*" MinWidth="150" />
             </Grid.ColumnDefinitions>
 
-            <sp:AvaPlot x:Name="AvaPlot" Grid.Column="0" Margin="4" />
+            <Grid Grid.Column="0" Margin="4" RowDefinitions="Auto,*,Auto,Auto">
+
+                <!-- Signal badge strip (empty/collapsed until an analysis has run) -->
+                <ItemsControl Grid.Row="0"
+                              ItemsSource="{Binding Indicators.SignalBadges}"
+                              IsVisible="{Binding HasIndicators}"
+                              Margin="0,0,0,4">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:BadgeViewModel}">
+                            <Border Background="{Binding Color}"
+                                    CornerRadius="4"
+                                    Padding="5,2"
+                                    Margin="2,1">
+                                <TextBlock Text="{Binding Name}" FontSize="11" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <sp:AvaPlot x:Name="AvaPlot" Grid.Row="1" />
+
+                <GridSplitter Grid.Row="2" Height="5"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                              Background="#DDD" ResizeDirection="Rows"
+                              IsVisible="{Binding HasIndicators}" />
+
+                <!-- Technicals panel -->
+                <Grid Grid.Row="3" RowDefinitions="Auto,Auto" IsVisible="{Binding HasIndicators}">
+                    <Button Grid.Row="0"
+                            Command="{Binding ToggleTechnicalsPanelCommand}"
+                            Background="Transparent" BorderThickness="0"
+                            Padding="0" HorizontalAlignment="Left"
+                            HorizontalContentAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="▾" IsVisible="{Binding IsTechnicalsPanelExpanded}" />
+                            <TextBlock Text="▸" IsVisible="{Binding !IsTechnicalsPanelExpanded}" />
+                            <TextBlock Text="Technicals" FontWeight="Bold" />
+                        </StackPanel>
+                    </Button>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*"
+                          IsVisible="{Binding IsTechnicalsPanelExpanded}"
+                          Margin="0,4,0,0">
+
+                        <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,8,0">
+                            <TextBlock Text="Moving Averages" FontWeight="Bold" FontSize="12" Margin="0,0,0,2" />
+                            <ItemsControl ItemsSource="{Binding Indicators.MovingAverageRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:IndicatorRowViewModel}">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Value}" DockPanel.Dock="Right" />
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Support / Resistance" FontWeight="Bold" FontSize="12" Margin="0,8,0,2" />
+                            <DockPanel>
+                                <TextBlock Text="{Binding Indicators.SupportText}" DockPanel.Dock="Right" />
+                                <TextBlock Text="Support" />
+                            </DockPanel>
+                            <DockPanel>
+                                <TextBlock Text="{Binding Indicators.ResistanceText}" DockPanel.Dock="Right" />
+                                <TextBlock Text="Resistance" />
+                            </DockPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="Momentum &amp; Oscillators" FontWeight="Bold" FontSize="12" Margin="0,0,0,2" />
+                            <ItemsControl ItemsSource="{Binding Indicators.MomentumRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:IndicatorRowViewModel}">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Value}" DockPanel.Dock="Right" />
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
 
             <GridSplitter Grid.Column="1" Width="5"
                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
