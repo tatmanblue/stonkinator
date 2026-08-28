@@ -26,6 +26,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     private bool isAskingFollowUp;
     private TechnicalIndicatorsViewModel? indicators;
     private bool isTechnicalsPanelExpanded = true;
+    private bool isQaPanelVisible;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -137,6 +138,14 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     {
         get => isTechnicalsPanelExpanded;
         set => SetField(ref isTechnicalsPanelExpanded, value);
+    }
+
+    // Deliberately not reset when a new analysis starts or a history item loads — this is a
+    // UI preference, not tied to a specific analysis, so it stays as the user left it.
+    public bool IsQaPanelVisible
+    {
+        get => isQaPanelVisible;
+        set => SetField(ref isQaPanelVisible, value);
     }
 
     public ObservableCollection<QaTurnViewModel> FollowUpTurns { get; } = new();

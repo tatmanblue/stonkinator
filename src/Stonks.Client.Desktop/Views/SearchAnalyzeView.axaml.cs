@@ -28,9 +28,21 @@ public partial class SearchAnalyzeView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SearchAnalyzeViewModel.ChartBars) && viewModel is not null)
+        if (viewModel is null) return;
+
+        if (e.PropertyName == nameof(SearchAnalyzeViewModel.ChartBars))
             UpdateChart(viewModel.ChartBars);
+
+        if (e.PropertyName == nameof(SearchAnalyzeViewModel.IsQaPanelVisible))
+            UpdateQaColumnWidth(viewModel.IsQaPanelVisible);
     }
+
+    // ColumnDefinition.Width isn't bound in XAML — set imperatively so hiding the panel
+    // actually reclaims its column width instead of leaving a blank gap.
+    private void UpdateQaColumnWidth(bool isVisible) =>
+        ContentGrid.ColumnDefinitions[4].Width = isVisible
+            ? new GridLength(1.5, GridUnitType.Star)
+            : new GridLength(0);
 
     private async void OnCopyClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
