@@ -213,7 +213,8 @@ public class GeminiClient : IAiClient
         var sb = new StringBuilder();
         sb.AppendLine($"You are an expert technical analyst. Analyze the following daily OHLCV data for {ticker}");
         sb.AppendLine("and provide a concise technical analysis covering: trend direction, key support/resistance");
-        sb.AppendLine("levels, notable patterns, and a brief outlook.");
+        sb.AppendLine("levels, Bollinger Band position and volatility (squeeze or expansion), notable patterns,");
+        sb.AppendLine("and a brief outlook.");
         sb.AppendLine();
         sb.AppendLine($"Ticker: {ticker}");
         if (bars.Count > 0)
@@ -232,7 +233,7 @@ public class GeminiClient : IAiClient
     {
         var hasAnyIndicator = indicators.MovingAverages.Count > 0 || indicators.HasRsi
             || indicators.HasMacd || indicators.HasStochastic || indicators.HasWilliamsR
-            || indicators.SupportLevels.Count > 0 || indicators.ResistanceLevels.Count > 0;
+            || indicators.HasBollinger || indicators.SupportLevels.Count > 0 || indicators.ResistanceLevels.Count > 0;
         if (!hasAnyIndicator) return;
 
         sb.AppendLine("Current Technical Indicators (already computed from a longer price history than the");
@@ -255,6 +256,12 @@ public class GeminiClient : IAiClient
 
         if (indicators.HasWilliamsR)
             sb.AppendLine($"Williams %R: {indicators.WilliamsR:F1}");
+
+        if (indicators.HasBollinger)
+            sb.AppendLine($"Bollinger Bands(20,2): upper {indicators.BollingerUpper:F2}, middle {indicators.BollingerMiddle:F2}, " +
+                           $"lower {indicators.BollingerLower:F2}; %B {indicators.BollingerPercentB:F2}; " +
+                           $"bandwidth {indicators.BollingerBandwidth:P1} " +
+                           $"(squeeze: {(indicators.BollingerSqueeze ? "yes, bandwidth near a 6-month low" : "no")})");
 
         if (indicators.SupportLevels.Count > 0)
             sb.AppendLine("Support: " + string.Join(", ", indicators.SupportLevels.Select(l => $"${l.Price:F2}")));

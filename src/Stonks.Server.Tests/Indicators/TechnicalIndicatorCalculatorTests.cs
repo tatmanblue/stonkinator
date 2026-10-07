@@ -69,8 +69,88 @@ public class TechnicalIndicatorCalculatorTests
         Assert.False(result.HasMacd);
         Assert.False(result.HasStochastic);
         Assert.False(result.HasWilliamsR);
+        Assert.False(result.HasBollinger);
         Assert.Empty(result.SupportLevels);
         Assert.Empty(result.ResistanceLevels);
+    }
+
+    // `volatileFirst` chooses whether the swinging 90/110 stretch comes before or after a
+    // calm stretch that barely moves around 100. Long enough to evaluate a Bollinger squeeze.
+    private static List<OhlcvBar> VolatilityShiftSeries(bool volatileFirst)
+    {
+        var bars = new List<OhlcvBar>();
+        for (int i = 0; i < 170; i++)
+        {
+            bool inVolatileStretch = volatileFirst ? i < 140 : i >= 30;
+            double close = inVolatileStretch
+                ? (i % 2 == 0 ? 90 : 110)
+                : (i % 2 == 0 ? 100 : 100.1);
+            bars.Add(Bar(i, close, close, close, close));
+        }
+        return bars;
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_UsesPopulationStdDevOfLast20Closes()
+    {
+        // Closes 1..20: mean 10.5, population variance (20^2 - 1) / 12.
+        var bars = RisingSeries(20);
+        double stdDev = Math.Sqrt(399.0 / 12);
+        double expectedUpper = 10.5 + 2 * stdDev;
+        double expectedLower = 10.5 - 2 * stdDev;
+
+        var result = calculator.Calculate(bars);
+
+        Assert.True(result.HasBollinger);
+        Assert.Equal(10.5, result.BollingerMiddle, precision: 6);
+        Assert.Equal(expectedUpper, result.BollingerUpper, precision: 6);
+        Assert.Equal(expectedLower, result.BollingerLower, precision: 6);
+        Assert.Equal((20 - expectedLower) / (expectedUpper - expectedLower), result.BollingerPercentB, precision: 6);
+        Assert.Equal((expectedUpper - expectedLower) / 10.5, result.BollingerBandwidth, precision: 6);
+        Assert.False(result.BollingerSqueeze); // not enough history to rank bandwidth
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_WithFewerThan20Bars_IsOmitted()
+    {
+        var result = calculator.Calculate(RisingSeries(19));
+
+        Assert.False(result.HasBollinger);
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_ConstantPrice_CollapsesBandsAndCentersPercentB()
+    {
+        var bars = new List<OhlcvBar>();
+        for (int i = 0; i < 30; i++)
+            bars.Add(Bar(i, 100, 100, 100, 100));
+
+        var result = calculator.Calculate(bars);
+
+        Assert.True(result.HasBollinger);
+        Assert.Equal(100, result.BollingerUpper, precision: 9);
+        Assert.Equal(100, result.BollingerMiddle, precision: 9);
+        Assert.Equal(100, result.BollingerLower, precision: 9);
+        Assert.Equal(0.5, result.BollingerPercentB, precision: 9);
+        Assert.Equal(0, result.BollingerBandwidth, precision: 9);
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_CalmAfterVolatility_FlagsSqueeze()
+    {
+        var result = calculator.Calculate(VolatilityShiftSeries(volatileFirst: true));
+
+        Assert.True(result.HasBollinger);
+        Assert.True(result.BollingerSqueeze);
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_VolatilityAfterCalm_DoesNotFlagSqueeze()
+    {
+        var result = calculator.Calculate(VolatilityShiftSeries(volatileFirst: false));
+
+        Assert.True(result.HasBollinger);
+        Assert.False(result.BollingerSqueeze);
     }
 
     [Fact]

@@ -15,6 +15,10 @@ public class TechnicalIndicatorCalculator : ITechnicalIndicatorCalculator
     private const int WILLIAMS_R_PERIOD = 14;
     private const int SWING_WINDOW = 5;
     private const int MAX_LEVELS_PER_SIDE = 2;
+    private const int BOLLINGER_PERIOD = 20;
+    private const double BOLLINGER_STD_DEV_MULTIPLIER = 2.0;
+    private const int BOLLINGER_SQUEEZE_LOOKBACK = 126;
+    private const double BOLLINGER_SQUEEZE_PERCENTILE = 0.10;
 
     public TechnicalIndicators Calculate(IReadOnlyList<OhlcvBar> bars)
     {
@@ -30,6 +34,7 @@ public class TechnicalIndicatorCalculator : ITechnicalIndicatorCalculator
         CalculateStochastic(result, bars);
         CalculateWilliamsR(result, bars);
         CalculateSupportResistance(result, bars, currentClose);
+        CalculateBollingerBands(result, closes);
 
         return result;
     }
@@ -207,5 +212,46 @@ public class TechnicalIndicatorCalculator : ITechnicalIndicatorCalculator
             result.ResistanceLevels.Add(new TechnicalIndicators.Types.SupportResistanceLevel { Price = price });
         foreach (double price in supportCandidates.OrderByDescending(p => p))
             result.SupportLevels.Add(new TechnicalIndicators.Types.SupportResistanceLevel { Price = price });
+    }
+
+    // Uses the population standard deviation of the last BOLLINGER_PERIOD closes, which is the
+    // conventional Bollinger definition. Squeeze is only reported once there is enough history
+    // to rank the current bandwidth against the trailing BOLLINGER_SQUEEZE_LOOKBACK values.
+    private static void CalculateBollingerBands(TechnicalIndicators result, double[] closes)
+    {
+        if (closes.Length < BOLLINGER_PERIOD) return;
+
+        List<double> bandwidths = new();
+        double upper = 0;
+        double middle = 0;
+        double lower = 0;
+        for (int i = BOLLINGER_PERIOD - 1; i < closes.Length; i++)
+        {
+            double[] window = closes[(i - BOLLINGER_PERIOD + 1)..(i + 1)];
+            double mean = window.Average();
+            double stdDev = Math.Sqrt(window.Sum(c => (c - mean) * (c - mean)) / BOLLINGER_PERIOD);
+            middle = mean;
+            upper = mean + BOLLINGER_STD_DEV_MULTIPLIER * stdDev;
+            lower = mean - BOLLINGER_STD_DEV_MULTIPLIER * stdDev;
+            bandwidths.Add(mean == 0 ? 0 : (upper - lower) / mean);
+        }
+
+        double bandRange = upper - lower;
+        double currentBandwidth = bandwidths[^1];
+
+        result.HasBollinger       = true;
+        result.BollingerUpper     = upper;
+        result.BollingerMiddle    = middle;
+        result.BollingerLower     = lower;
+        result.BollingerPercentB  = bandRange == 0 ? 0.5 : (closes[^1] - lower) / bandRange;
+        result.BollingerBandwidth = currentBandwidth;
+
+        if (bandwidths.Count >= BOLLINGER_SQUEEZE_LOOKBACK)
+        {
+            // Counting ties (<=) means a flat, unchanging bandwidth is not mistaken for a squeeze.
+            int atOrBelowCount = bandwidths.Skip(bandwidths.Count - BOLLINGER_SQUEEZE_LOOKBACK)
+                .Count(bw => bw <= currentBandwidth);
+            result.BollingerSqueeze = atOrBelowCount <= BOLLINGER_SQUEEZE_LOOKBACK * BOLLINGER_SQUEEZE_PERCENTILE;
+        }
     }
 }

@@ -19,6 +19,8 @@ public sealed class TechnicalIndicatorsViewModel
     public IReadOnlyList<BadgeViewModel> SignalBadges { get; }
     public IReadOnlyList<IndicatorRowViewModel> MovingAverageRows { get; }
     public IReadOnlyList<IndicatorRowViewModel> MomentumRows { get; }
+    public IReadOnlyList<IndicatorRowViewModel> BollingerRows { get; }
+    public bool HasBollinger { get; }
     public string SupportText { get; }
     public string ResistanceText { get; }
 
@@ -39,6 +41,18 @@ public sealed class TechnicalIndicatorsViewModel
         if (proto.HasWilliamsR)
             momentumRows.Add(new IndicatorRowViewModel("Williams %R", $"{proto.WilliamsR:F1}"));
         MomentumRows = momentumRows;
+
+        var bollingerRows = new List<IndicatorRowViewModel>();
+        if (proto.HasBollinger)
+        {
+            bollingerRows.Add(new IndicatorRowViewModel("Upper", $"${proto.BollingerUpper:F2}"));
+            bollingerRows.Add(new IndicatorRowViewModel("Middle", $"${proto.BollingerMiddle:F2}"));
+            bollingerRows.Add(new IndicatorRowViewModel("Lower", $"${proto.BollingerLower:F2}"));
+            bollingerRows.Add(new IndicatorRowViewModel("%B", $"{proto.BollingerPercentB:F2}"));
+            bollingerRows.Add(new IndicatorRowViewModel("Bandwidth", $"{proto.BollingerBandwidth:P1}"));
+        }
+        BollingerRows = bollingerRows;
+        HasBollinger = proto.HasBollinger;
 
         SupportText = proto.SupportLevels.Count > 0
             ? string.Join(", ", proto.SupportLevels.Select(l => $"${l.Price:F2}"))
@@ -77,6 +91,13 @@ public sealed class TechnicalIndicatorsViewModel
 
         if (proto.HasMacd)
             badges.Add(proto.MacdHistogram >= 0 ? "MACD: Buy" : "MACD: Sell");
+
+        if (proto.HasBollinger)
+        {
+            if (proto.BollingerSqueeze) badges.Add("BB Squeeze");
+            if (proto.BollingerPercentB > 1) badges.Add("Above Upper BB");
+            else if (proto.BollingerPercentB < 0) badges.Add("Below Lower BB");
+        }
 
         return badges.Select(b => new BadgeViewModel(b)).ToList();
     }

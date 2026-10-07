@@ -122,6 +122,18 @@
                                 <TextBlock Text="{Binding Indicators.ResistanceText}" DockPanel.Dock="Right" />
                                 <TextBlock Text="Resistance" />
                             </DockPanel>
+                            <TextBlock Text="Bollinger Bands (20,2)" FontWeight="Bold" FontSize="12" Margin="0,8,0,2"
+                                       IsVisible="{Binding Indicators.HasBollinger}" />
+                            <ItemsControl ItemsSource="{Binding Indicators.BollingerRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:IndicatorRowViewModel}">
+                                        <DockPanel>
+                                            <TextBlock Text="{Binding Value}" DockPanel.Dock="Right" />
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Spacing="2">

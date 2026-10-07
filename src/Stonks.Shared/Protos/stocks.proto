@@ -75,6 +75,14 @@ message TechnicalIndicators {
 
   repeated SupportResistanceLevel support_levels    = 15;
   repeated SupportResistanceLevel resistance_levels = 16;
+
+  bool   has_bollinger       = 17;
+  double bollinger_upper     = 18;
+  double bollinger_middle    = 19;                // SMA20
+  double bollinger_lower     = 20;
+  double bollinger_percent_b = 21;                // 0 = lower band, 1 = upper band; can fall outside 0..1
+  double bollinger_bandwidth = 22;                // (upper - lower) / middle
+  bool   bollinger_squeeze   = 23;                // bandwidth in the bottom 10% of the trailing ~6 months
 }
 
 // Re-fetches bars for a ticker/date range that isn't backed by an active analysis stream

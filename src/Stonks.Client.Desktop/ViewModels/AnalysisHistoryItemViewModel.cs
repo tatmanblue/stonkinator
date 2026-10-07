@@ -14,7 +14,8 @@ public sealed class BadgeViewModel
         Color = name switch
         {
             "Oversold" or "Overbought" or "RSI Oversold" or "RSI Overbought"
-                or "Stoch Oversold" or "Stoch Overbought" => "#FFF3CD",
+                or "Stoch Oversold" or "Stoch Overbought"
+                or "Above Upper BB" or "Below Lower BB"   => "#FFF3CD",
             "Uptrend" or "Golden Cross" or "MACD: Buy"    => "#D4EDDA",
             "Downtrend" or "Death Cross" or "MACD: Sell"  => "#F8D7DA",
             _                                              => "#E2E3E5",
