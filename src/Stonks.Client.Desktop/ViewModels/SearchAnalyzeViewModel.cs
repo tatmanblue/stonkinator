@@ -34,6 +34,7 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     {
         this.grpcClient = grpcClient;
         this.settingsService = settingsService;
+        settingsService.Saved += (_, _) => OnPropertyChanged(nameof(ShowBollingerOverlay));
         AnalyzeCommand = new AsyncCommand(RunAnalysisAsync);
         AskFollowUpCommand = new AsyncCommand(AskFollowUpAsync,
             () => !isAskingFollowUp && !string.IsNullOrWhiteSpace(followUpQuestion));
@@ -133,6 +134,8 @@ public sealed class SearchAnalyzeViewModel : INotifyPropertyChanged
     }
 
     public bool HasIndicators => indicators is not null;
+
+    public bool ShowBollingerOverlay => settingsService.Current.ShowBollingerOverlay;
 
     public bool IsTechnicalsPanelExpanded
     {

@@ -10,6 +10,9 @@ public sealed class AppSettingsService
 
     public AppSettings Current { get; private set; } = new();
 
+    // Raised after Save() so open views can apply changed settings without a restart.
+    public event EventHandler? Saved;
+
     public void Load()
     {
         try
@@ -27,5 +30,6 @@ public sealed class AppSettingsService
     {
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Current, new JsonSerializerOptions { WriteIndented = true }));
+        Saved?.Invoke(this, EventArgs.Empty);
     }
 }

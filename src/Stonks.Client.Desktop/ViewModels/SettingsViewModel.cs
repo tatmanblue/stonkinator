@@ -9,6 +9,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly AppSettingsService settingsService;
     private bool includeOhlcvInFollowUp;
+    private bool showBollingerOverlay;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -16,6 +17,12 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         get => includeOhlcvInFollowUp;
         set => SetField(ref includeOhlcvInFollowUp, value);
+    }
+
+    public bool ShowBollingerOverlay
+    {
+        get => showBollingerOverlay;
+        set => SetField(ref showBollingerOverlay, value);
     }
 
     public ICommand SaveCommand { get; }
@@ -26,12 +33,14 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         this.settingsService = settingsService;
         includeOhlcvInFollowUp = settingsService.Current.IncludeOhlcvInFollowUp;
+        showBollingerOverlay = settingsService.Current.ShowBollingerOverlay;
         SaveCommand = new AsyncCommand(SaveAsync);
     }
 
     private Task SaveAsync()
     {
         settingsService.Current.IncludeOhlcvInFollowUp = includeOhlcvInFollowUp;
+        settingsService.Current.ShowBollingerOverlay = showBollingerOverlay;
         settingsService.Save();
         RequestClose?.Invoke();
         return Task.CompletedTask;

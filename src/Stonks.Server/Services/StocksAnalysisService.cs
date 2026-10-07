@@ -16,6 +16,10 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
     // regardless of what range gets streamed to the chart.
     private const int INDICATOR_LOOKBACK_DAYS = 400;
 
+    // Calendar days fetched before the chart start so per-day overlays (Bollinger bands and
+    // their squeeze ranking, ~145 trading days of warm-up) cover the whole visible chart.
+    private const int OVERLAY_WARMUP_DAYS = 220;
+
     private readonly IMarketDataClient marketDataClient;
     private readonly IAiClient aiClient;
     private readonly IAnalysisRepository repository;
@@ -40,11 +44,16 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
     }
 
     private async Task<TechnicalIndicators> CalculateIndicatorsAsync(
-        string ticker, DateOnly endDate, CancellationToken ct)
+        string ticker, DateOnly startDate, DateOnly endDate, CancellationToken ct)
     {
-        var lookbackStart = endDate.AddDays(-INDICATOR_LOOKBACK_DAYS);
+        DateOnly indicatorStart = endDate.AddDays(-INDICATOR_LOOKBACK_DAYS);
+        DateOnly overlayStart = startDate.AddDays(-OVERLAY_WARMUP_DAYS);
+        DateOnly lookbackStart = overlayStart < indicatorStart ? overlayStart : indicatorStart;
+
         var lookbackBars = await marketDataClient.GetOhlcvAsync(ticker, lookbackStart, endDate, ct);
-        return indicatorCalculator.Calculate(lookbackBars);
+        TechnicalIndicators indicators = indicatorCalculator.Calculate(lookbackBars);
+        ChartOverlayTrimmer.TrimToRange(indicators, startDate, endDate);
+        return indicators;
     }
 
     public override async Task AnalyzeStock(
@@ -76,8 +85,9 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
         TechnicalIndicators indicators;
         try
         {
+            var start = DateOnly.Parse(request.StartDate);
             var end = DateOnly.Parse(request.EndDate);
-            indicators = await CalculateIndicatorsAsync(request.Ticker, end, context.CancellationToken);
+            indicators = await CalculateIndicatorsAsync(request.Ticker, start, end, context.CancellationToken);
             await responseStream.WriteAsync(new AnalyzeStockResponse { TechnicalIndicators = indicators });
         }
         catch (Exception ex)
@@ -143,7 +153,7 @@ public class StocksAnalysisService : StocksAnalysis.StocksAnalysisBase
             var bars = await marketDataClient.GetOhlcvAsync(request.Ticker, start, end, context.CancellationToken);
             var response = new GetOhlcvBarsResponse();
             response.Bars.AddRange(bars);
-            response.Indicators = await CalculateIndicatorsAsync(request.Ticker, end, context.CancellationToken);
+            response.Indicators = await CalculateIndicatorsAsync(request.Ticker, start, end, context.CancellationToken);
             return response;
         }
         catch (Exception ex)

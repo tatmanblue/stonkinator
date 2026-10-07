@@ -83,6 +83,21 @@ message TechnicalIndicators {
   double bollinger_percent_b = 21;                // 0 = lower band, 1 = upper band; can fall outside 0..1
   double bollinger_bandwidth = 22;                // (upper - lower) / middle
   bool   bollinger_squeeze   = 23;                // bandwidth in the bottom 10% of the trailing ~6 months
+
+  repeated ChartOverlaySeries chart_overlays            = 24;  // trimmed to the requested chart range
+  repeated DateRange          bollinger_squeeze_periods = 25;  // trimmed to the requested chart range
+}
+
+// One per-day line drawn over the price chart. `id` values live in Stonks.Shared.Charting.ChartOverlayIds.
+message ChartOverlaySeries {
+  string          id     = 1;
+  repeated string dates  = 2;  // YYYY-MM-DD, aligned index-for-index with values
+  repeated double values = 3;
+}
+
+message DateRange {
+  string start_date = 1;  // YYYY-MM-DD, inclusive
+  string end_date   = 2;  // YYYY-MM-DD, inclusive
 }
 
 // Re-fetches bars for a ticker/date range that isn't backed by an active analysis stream

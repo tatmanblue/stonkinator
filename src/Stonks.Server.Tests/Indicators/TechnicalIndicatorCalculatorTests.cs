@@ -1,4 +1,5 @@
 using Stonks.Server.Indicators;
+using Stonks.Shared.Charting;
 using Stonks.Shared.Grpc;
 
 namespace Stonks.Server.Tests.Indicators;
@@ -151,6 +152,46 @@ public class TechnicalIndicatorCalculatorTests
 
         Assert.True(result.HasBollinger);
         Assert.False(result.BollingerSqueeze);
+        Assert.Empty(result.BollingerSqueezePeriods);
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_EmitsDailyOverlaySeriesEndingAtCurrentValues()
+    {
+        var bars = RisingSeries(30);
+
+        var result = calculator.Calculate(bars);
+
+        var upper = Assert.Single(result.ChartOverlays, o => o.Id == ChartOverlayIds.BOLLINGER_UPPER);
+        var middle = Assert.Single(result.ChartOverlays, o => o.Id == ChartOverlayIds.BOLLINGER_MIDDLE);
+        var lower = Assert.Single(result.ChartOverlays, o => o.Id == ChartOverlayIds.BOLLINGER_LOWER);
+
+        // One point per bar from the 20th onward.
+        foreach (var series in new[] { upper, middle, lower })
+        {
+            Assert.Equal(11, series.Dates.Count);
+            Assert.Equal(11, series.Values.Count);
+            Assert.Equal(bars[19].Date, series.Dates[0]);
+            Assert.Equal(bars[^1].Date, series.Dates[^1]);
+        }
+
+        Assert.Equal(result.BollingerUpper, upper.Values[^1], precision: 9);
+        Assert.Equal(result.BollingerMiddle, middle.Values[^1], precision: 9);
+        Assert.Equal(result.BollingerLower, lower.Values[^1], precision: 9);
+    }
+
+    [Fact]
+    public void Calculate_Bollinger_CalmAfterVolatility_ReportsSqueezePeriodEndingToday()
+    {
+        var bars = VolatilityShiftSeries(volatileFirst: true);
+
+        var result = calculator.Calculate(bars);
+
+        // Bandwidth starts narrowing at bar 140 when calm closes enter the window, so every later bar
+        // is a new low. Bar 144 is the first with a full squeeze ranking window (19 + 126 - 1).
+        var period = Assert.Single(result.BollingerSqueezePeriods);
+        Assert.Equal(bars[144].Date, period.StartDate);
+        Assert.Equal(bars[^1].Date, period.EndDate);
     }
 
     [Fact]

@@ -21,6 +21,8 @@ public sealed class TechnicalIndicatorsViewModel
     public IReadOnlyList<IndicatorRowViewModel> MomentumRows { get; }
     public IReadOnlyList<IndicatorRowViewModel> BollingerRows { get; }
     public bool HasBollinger { get; }
+    public IReadOnlyList<ChartOverlaySeries> ChartOverlays { get; }
+    public IReadOnlyList<DateRange> BollingerSqueezePeriods { get; }
     public string SupportText { get; }
     public string ResistanceText { get; }
 
@@ -53,6 +55,8 @@ public sealed class TechnicalIndicatorsViewModel
         }
         BollingerRows = bollingerRows;
         HasBollinger = proto.HasBollinger;
+        ChartOverlays = proto.ChartOverlays.ToList();
+        BollingerSqueezePeriods = proto.BollingerSqueezePeriods.ToList();
 
         SupportText = proto.SupportLevels.Count > 0
             ? string.Join(", ", proto.SupportLevels.Select(l => $"${l.Price:F2}"))
